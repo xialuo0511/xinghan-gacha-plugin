@@ -25,7 +25,7 @@ export class records extends plugin {
       name: "三游戏抽卡记录图",
       dsc: "查看原神、星铁和绝区零抽卡记录图片",
       event: "message",
-      priority: 5000,
+      priority: 1000,
       rule: [
         {
           reg: "^#(?:抽卡记录|原神抽卡记录|抽卡记录-查看原神抽卡记录|查看原神抽卡记录)$",
@@ -58,7 +58,10 @@ export class records extends plugin {
       const view = await runtime.recordViewService.get(String(this.e.user_id), game)
       await this.reply(await renderRecordImage(puppeteer, view))
     } catch (error) {
-      recordLog("warn", `生成失败 game=${game} code=${String(error?.code ?? "UNKNOWN_ERROR")}`)
+      recordLog(
+        "warn",
+        `生成失败 game=${game} code=${String(error?.code ?? "UNKNOWN_ERROR")} cause=${String(error?.causeName ?? error?.name ?? "Error")}`,
+      )
       await this.reply(publicErrorMessage(error))
     }
     return true

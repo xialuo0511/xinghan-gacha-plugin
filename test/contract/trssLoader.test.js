@@ -38,7 +38,7 @@ test("TRSS-style root loader imports every app class", async context => {
   }
   context.after(() => delete globalThis.logger)
   const loaded = await import(`${pathToFileURL(path.join(pluginRoot, "index.js")).href}?smoke=1`)
-  assert.equal(startupLogs.some(message => /2026-08-02-records-r3/.test(message)), true)
+  assert.equal(startupLogs.some(message => /2026-08-02-records-r4/.test(message)), true)
   assert.equal(startupLogs.some(message => /records/.test(message)), true)
   assert.deepEqual(Object.keys(loaded.apps), [
     "account",
@@ -75,6 +75,7 @@ test("TRSS-style root loader imports every app class", async context => {
   assert.equal(help.rule.some(rule => new RegExp(rule.reg).test("#星瀚抽卡帮助")), true)
 
   const records = new loaded.apps.records()
+  assert.equal(records.priority, 1000)
   for (const command of [
     "#抽卡记录-查看原神抽卡记录",
     "#查看原神抽卡记录",
@@ -106,7 +107,7 @@ test("TRSS-style root loader imports every app class", async context => {
   status.e = { isPrivate: true, adapter_name: "MCQQ", message_type: "private" }
   status.reply = async message => statusReplies.push(message)
   await status.diagnose()
-  assert.match(statusReplies[0], /2026-08-02-records-r3/)
+  assert.match(statusReplies[0], /2026-08-02-records-r4/)
   assert.match(statusReplies[0], /主密钥：当前进程(?:已|未)读取/)
 
   const update = new loaded.apps.update()
