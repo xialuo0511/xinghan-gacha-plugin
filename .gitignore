@@ -1,0 +1,9 @@
+node_modules/
+.pnpm-store/
+coverage/
+data/
+temp/
+*.log
+.env
+.env.*
+!.env.example

@@ -1,0 +1,19 @@
+{
+  "name": "hoyo-gacha-plugin",
+  "version": "0.1.0",
+  "description": "TRSS-Yunzai plugin foundation for secure HoYoverse gacha record imports.",
+  "type": "module",
+  "private": true,
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=23.11.0"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4"
+  },
+  "scripts": {
+    "lint": "node scripts/lint.js",
+    "test": "node --test",
+    "check": "npm run lint && npm test"
+  }
+}
