@@ -18,8 +18,8 @@ body {
 #container {
   position: relative;
   width: 1000px;
-  min-height: 700px;
-  padding: 42px;
+  min-height: 0;
+  padding: 26px;
   overflow: hidden;
   background: var(--surface);
 }
@@ -40,11 +40,11 @@ body {
 
 .record-header {
   display: grid;
-  grid-template-columns: 72px minmax(0, 1fr) 260px;
-  gap: 24px;
+  grid-template-columns: 60px minmax(0, 1fr) 230px;
+  gap: 18px;
   align-items: center;
-  min-height: 210px;
-  padding: 30px;
+  min-height: 156px;
+  padding: 22px;
   color: var(--header-text);
   background: var(--header-bg);
   border: 1px solid var(--header-border);
@@ -54,11 +54,11 @@ body {
 
 .theme-emblem {
   display: grid;
-  width: 70px;
-  height: 70px;
+  width: 58px;
+  height: 58px;
   place-items: center;
   color: var(--accent-strong);
-  font-size: 42px;
+  font-size: 34px;
   background: var(--emblem-bg);
   border: 1px solid var(--header-border);
   border-radius: var(--emblem-radius);
@@ -76,17 +76,17 @@ body {
 .record-title {
   margin: 0;
   font-family: var(--display-font);
-  font-size: 36px;
+  font-size: 34px;
   line-height: 1.2;
   letter-spacing: 0.03em;
 }
 
 .record-subtitle {
   max-width: 500px;
-  margin: 10px 0 18px;
+  margin: 6px 0 12px;
   color: var(--muted-on-header);
-  font-size: 14px;
-  line-height: 1.7;
+  font-size: 15px;
+  line-height: 1.45;
 }
 
 .identity-strip {
@@ -105,8 +105,8 @@ body {
 }
 
 .luck-card {
-  min-height: 150px;
-  padding: 20px;
+  min-height: 116px;
+  padding: 16px;
   background: var(--luck-bg);
   border: 2px solid var(--luck-color);
   border-radius: var(--radius-medium);
@@ -124,15 +124,15 @@ body {
   display: block;
   margin: 8px 0;
   color: var(--luck-color);
-  font-size: 30px;
+  font-size: 28px;
   line-height: 1.15;
 }
 
 .luck-message {
   margin: 0;
   color: var(--header-text);
-  font-size: 13px;
-  line-height: 1.65;
+  font-size: 14px;
+  line-height: 1.45;
 }
 
 .luck-lucky,
@@ -154,14 +154,14 @@ body {
 
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
-  margin: 22px 0;
+  margin: 14px 0;
 }
 
 .metric-card {
-  min-height: 122px;
-  padding: 18px 16px;
+  min-height: 94px;
+  padding: 14px 16px;
   background: var(--card-bg);
   border: 1px solid var(--line);
   border-radius: var(--radius-small);
@@ -172,21 +172,21 @@ body {
 .metric-note {
   display: block;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .metric-value {
   display: block;
-  margin: 9px 0 7px;
+  margin: 7px 0 5px;
   color: var(--accent-strong);
   font-family: var(--display-font);
-  font-size: 25px;
+  font-size: 30px;
   line-height: 1;
 }
 
 .record-section {
-  margin-top: 22px;
-  padding: 24px;
+  margin-top: 14px;
+  padding: 18px;
   background: var(--section-bg);
   border: 1px solid var(--line);
   border-radius: var(--radius-large);
@@ -197,29 +197,29 @@ body {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  margin-bottom: 17px;
+  margin-bottom: 13px;
 }
 
 .section-title {
   margin: 0;
   color: var(--heading);
   font-family: var(--display-font);
-  font-size: 23px;
+  font-size: 25px;
 }
 
 .section-note {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .pool-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 
 .pool-card {
-  padding: 16px;
+  padding: 14px;
   background: var(--card-bg);
   border: 1px solid var(--line);
   border-left: 4px solid var(--accent);
@@ -237,30 +237,30 @@ body {
 .pool-name {
   margin: 0;
   color: var(--heading);
-  font-size: 15px;
+  font-size: 16px;
 }
 
 .pool-total,
 .pool-values,
 .pool-footer {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .pool-pity {
   color: var(--accent-strong);
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 800;
 }
 
 .pool-values {
   justify-content: flex-start;
-  margin-top: 12px;
+  margin-top: 9px;
 }
 
 .pity-track {
   height: 7px;
-  margin: 11px 0;
+  margin: 9px 0;
   overflow: hidden;
   background: var(--track);
   border-radius: 999px;
@@ -274,16 +274,37 @@ body {
 
 .highlight-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
 
 .highlight-card {
-  min-height: 166px;
-  padding: 16px;
+  min-height: 150px;
+  padding: 14px;
   background: var(--highlight-bg);
   border: 1px solid var(--highlight-border);
+  border-top: 5px solid var(--pull-color);
   border-radius: var(--radius-small);
+}
+
+.pull-lucky {
+  --pull-color: #55d9a1;
+}
+
+.pull-good {
+  --pull-color: #75b9ff;
+}
+
+.pull-steady {
+  --pull-color: #f1c75b;
+}
+
+.pull-warning {
+  --pull-color: #f08a5d;
+}
+
+.pull-hard {
+  --pull-color: #ef5f68;
 }
 
 .highlight-top {
@@ -292,7 +313,31 @@ body {
   justify-content: space-between;
 }
 
-.rank-badge,
+.pull-label {
+  color: var(--pull-color);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.pull-score {
+  display: flex;
+  align-items: baseline;
+  margin-top: 5px;
+  color: var(--pull-color);
+}
+
+.pull-number {
+  font-family: var(--display-font);
+  font-size: 42px;
+  line-height: 1;
+}
+
+.pull-unit {
+  margin-left: 5px;
+  font-size: 15px;
+  font-weight: 800;
+}
+
 .status-badge {
   display: inline-flex;
   align-items: center;
@@ -303,21 +348,6 @@ body {
   font-size: 12px;
   font-weight: 800;
   border-radius: 999px;
-}
-
-.rank-highest {
-  color: #38270a;
-  background: linear-gradient(135deg, #ffe49c, #e5a83c);
-}
-
-.rank-middle {
-  color: #fff;
-  background: linear-gradient(135deg, #b998ff, #7251b5);
-}
-
-.rank-normal {
-  color: #fff;
-  background: #7392b7;
 }
 
 .status-up {
@@ -337,13 +367,12 @@ body {
 
 .highlight-name,
 .highlight-pool,
-.highlight-pulls,
 .highlight-time {
   display: block;
 }
 
 .highlight-name {
-  margin-top: 13px;
+  margin-top: 5px;
   color: var(--heading);
   font-size: 18px;
 }
@@ -355,81 +384,13 @@ body {
   font-size: 11px;
 }
 
-.highlight-pulls {
-  margin-top: 10px;
-  color: var(--accent-strong);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.record-table {
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-small);
-}
-
-.record-row {
-  display: grid;
-  grid-template-columns: 82px 1.35fr 1fr 90px 174px;
-  min-height: 57px;
-  background: var(--card-bg);
-  border-top: 1px solid var(--line-soft);
-}
-
-.record-row:nth-child(odd) {
-  background: var(--row-alt);
-}
-
-.record-row:first-child {
-  border-top: 0;
-}
-
-.record-head {
-  min-height: 40px;
-  color: var(--table-head-text);
-  font-size: 11px;
-  font-weight: 800;
-  background: var(--table-head-bg) !important;
-}
-
-.record-cell {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  padding: 9px 11px;
-}
-
-.record-item {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-}
-
-.record-name {
-  max-width: 100%;
-  overflow: hidden;
-  color: var(--heading);
-  font-size: 13px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.record-type,
-.record-pool,
-.record-time,
-.status-empty {
-  color: var(--muted);
-  font-size: 10px;
-}
-
 .record-footer {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 8px 16px;
   align-items: end;
-  margin-top: 22px;
-  padding: 18px 22px;
+  margin-top: 14px;
+  padding: 12px 18px;
   color: var(--footer-text);
   background: var(--footer-bg);
   border-radius: var(--radius-medium);
@@ -438,8 +399,8 @@ body {
 .disclaimer {
   grid-column: 1 / -1;
   margin: 0;
-  font-size: 11px;
-  line-height: 1.7;
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .brand {

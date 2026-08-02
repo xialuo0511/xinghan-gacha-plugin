@@ -91,10 +91,39 @@ for (const game of ["genshin", "starrail", "zzz"]) {
         [game === "genshin" ? "迪卢克" : game === "starrail" ? "布洛妮娅" : "莱卡恩", "歪", 3],
       ],
     )
-    assert.equal(view.recent.length, 5)
+    assert.equal(view.highlights.every(item => item.pullLuck.label === "欧皇"), true)
+    assert.equal("recent" in view, false)
+    assert.equal("middleCount" in view.summary, false)
     assert.equal(view.generatedAt, "2026-08-02T12:00:00.000Z")
   })
 }
+
+test("classifies every high-rarity result by its pool-specific pull count", async () => {
+  const role = roles.genshin
+  const highAt = new Set([20, 70, 140, 220, 310])
+  const source = Array.from({ length: 310 }, (_, index) => {
+    const id = index + 1
+    return record(role, id, `Item ${id}`, highAt.has(id) ? "5" : "3", "301")
+  })
+  const custom = service({
+    recordStore: {
+      listRoles: async () => [role],
+      load: async () => source,
+    },
+  })
+
+  const view = await custom.get("user-a", "genshin")
+  assert.deepEqual(
+    [...view.highlights].reverse().map(item => [item.pulls, item.pullLuck.label, item.pullLuck.tone]),
+    [
+      [20, "欧皇", "lucky"],
+      [50, "小欧", "good"],
+      [70, "常态", "steady"],
+      [80, "偏非", "warning"],
+      [90, "大保底", "hard"],
+    ],
+  )
+})
 
 test("an explicit isUp field takes precedence over the standard character catalog", async () => {
   const role = roles.genshin

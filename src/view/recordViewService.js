@@ -2,9 +2,9 @@ import { compareRecordIds, getGameAdapter } from "../games/registry.js"
 import { ProtocolError } from "../protocol/http.js"
 
 const RARITY = Object.freeze({
-  genshin: Object.freeze({ high: "5", middle: "4", labels: { 5: "5★", 4: "4★", 3: "3★" } }),
-  starrail: Object.freeze({ high: "5", middle: "4", labels: { 5: "5★", 4: "4★", 3: "3★" } }),
-  zzz: Object.freeze({ high: "4", middle: "3", labels: { 4: "S", 3: "A", 2: "B" } }),
+  genshin: Object.freeze({ high: "5" }),
+  starrail: Object.freeze({ high: "5" }),
+  zzz: Object.freeze({ high: "4" }),
 })
 
 const LIMITED_CHARACTER_POOLS = Object.freeze({
@@ -134,15 +134,6 @@ function upStatus(game, record, highRank) {
   return Object.freeze({ label: "UP", tone: "up", source: "standard-catalog" })
 }
 
-function rankPresentation(game, rankType) {
-  const rank = String(rankType ?? "")
-  const spec = RARITY[game]
-  return Object.freeze({
-    label: spec.labels[rank] ?? rank,
-    tone: rank === spec.high ? "highest" : rank === spec.middle ? "middle" : "normal",
-  })
-}
-
 function hardPity(game, pool) {
   if (game === "genshin" && pool.queryType === "302") return 80
   if (game === "starrail" && ["12", "22"].includes(pool.queryType)) return 80
@@ -150,26 +141,34 @@ function hardPity(game, pool) {
   return 90
 }
 
+function pullLuck(pulls, pityCap) {
+  const ratio = pulls / pityCap
+  if (ratio <= 0.35) return Object.freeze({ label: "欧皇", tone: "lucky" })
+  if (ratio <= 0.6) return Object.freeze({ label: "小欧", tone: "good" })
+  if (ratio <= 0.8) return Object.freeze({ label: "常态", tone: "steady" })
+  if (ratio < 1) return Object.freeze({ label: "偏非", tone: "warning" })
+  return Object.freeze({ label: "大保底", tone: "hard" })
+}
+
 function analyzePool(game, pool, records) {
   const spec = RARITY[game]
   const ascending = [...records].sort((left, right) => compareRecordIds(left.id, right.id))
-  const pityById = new Map()
   const highlights = []
+  const cap = hardPity(game, pool)
   let currentPity = 0
 
   for (const record of ascending) {
     currentPity += 1
     if (record.rankType !== spec.high) continue
     const status = upStatus(game, record, spec.high)
-    pityById.set(record.id, currentPity)
     highlights.push(
       Object.freeze({
         id: record.id,
         name: record.name ?? record.itemId ?? "未知物品",
         time: record.time,
         pulls: currentPity,
+        pullLuck: pullLuck(currentPity, cap),
         status,
-        rank: rankPresentation(game, record.rankType),
         poolName: pool.name,
       }),
     )
@@ -179,7 +178,6 @@ function analyzePool(game, pool, records) {
   const highCount = highlights.length
   const upCount = highlights.filter(item => item.status?.tone === "up").length
   const offCount = highlights.filter(item => item.status?.tone === "off").length
-  const cap = hardPity(game, pool)
   return Object.freeze({
     pool: Object.freeze({
       queryType: pool.queryType,
@@ -193,7 +191,6 @@ function analyzePool(game, pool, records) {
       offCount,
       latestHigh: highlights.at(-1)?.name,
     }),
-    pityById,
     highlights: highlights.reverse(),
   })
 }
@@ -262,7 +259,6 @@ export class RecordViewService {
         records.filter(record => record.gachaType === pool.queryType),
       ),
     )
-    const pityById = new Map(poolAnalyses.flatMap(analysis => [...analysis.pityById]))
     const highlights = poolAnalyses
       .flatMap(analysis => analysis.highlights)
       .sort((left, right) => compareRecordIds(right.id, left.id))
@@ -271,17 +267,6 @@ export class RecordViewService {
     const upCount = highlights.filter(item => item.status?.tone === "up").length
     const offCount = highlights.filter(item => item.status?.tone === "off").length
     const unknownUpCount = highlights.filter(item => item.status?.tone === "unknown").length
-
-    const recent = records.slice(0, 30).map(record => ({
-      id: record.id,
-      name: record.name ?? record.itemId ?? "未知物品",
-      itemType: record.itemType ?? "未知类型",
-      time: record.time,
-      poolName: adapter.poolForQueryType(record.gachaType)?.name ?? record.gachaType,
-      rank: rankPresentation(game, record.rankType),
-      status: upStatus(game, record, RARITY[game].high),
-      pulls: pityById.get(record.id),
-    }))
 
     return Object.freeze({
       game,
@@ -293,7 +278,6 @@ export class RecordViewService {
       summary: Object.freeze({
         total: records.length,
         highCount: highlights.length,
-        middleCount: records.filter(record => record.rankType === RARITY[game].middle).length,
         averageHighPity,
         upCount,
         offCount,
@@ -302,9 +286,8 @@ export class RecordViewService {
       luck: luckCopy(game, averageHighPity, highlights.length),
       pools: Object.freeze(poolAnalyses.map(analysis => analysis.pool)),
       highlights: Object.freeze(highlights.slice(0, 12)),
-      recent: Object.freeze(recent),
       disclaimer:
-        "欧非评价按本地记录内高稀有出货抽数计算；UP/歪仅标记限定角色池，并优先采用记录显式标记，否则按常驻角色名单判定。",
+        "仅展示最近 12 个高稀有出货；抽数与欧非分级按本地记录内区间及对应卡池保底计算。UP/歪仅标记限定角色池。",
     })
   }
 }
