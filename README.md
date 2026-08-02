@@ -9,7 +9,7 @@
 - 国服米游社 App 二维码登录、Redis 会话互斥及三游戏角色发现；
 - AES-256-GCM 凭据存储；未提供主密钥时仅保存在当前进程内存；
 - 原神 `100/200/301/302/500` 五池 authkey 拉取、分页、退避和增量存储；
-- 星铁 `1/2/11/12/21/22` 六池同步，联动池独立路由和可信旧路径回退；
+- 星铁通过游戏内抽卡 URL 同步 `1/2/11/12/21/22` 六池，联动池使用独立路由；
 - 绝区零 `1/2/3/5/102/103` 六池同步及长短池类型映射；
 - 三游戏可信抽卡 URL 手动导入，支持国服和国际服白名单端点；
 - UIGF v4.1 三游戏导出、UIGF v4.x 导入及旧版 UIGF/SRGF 迁移；
@@ -36,7 +36,64 @@ pnpm check
 node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"
 ```
 
-将输出设置为环境变量 `HOYO_GACHA_MASTER_KEY`。也支持 64 位十六进制密钥。请使用密码管理器保存；密钥丢失后无法解密既有授权文件。
+将输出设置为环境变量 `HOYO_GACHA_MASTER_KEY`。也支持 64 位十六进制密钥。
+
+### 设置主密钥环境变量
+
+必须在**启动 TRSS-Yunzai 的同一用户环境中**设置变量，然后重启 TRSS-Yunzai。不要把真实密钥提交到仓库、粘贴到群聊或写进公开日志。
+
+#### Windows PowerShell：仅当前窗口生效
+
+下面的命令会直接生成密钥并放入当前 PowerShell，不会在终端中打印密钥：
+
+```powershell
+$env:HOYO_GACHA_MASTER_KEY = node -e "process.stdout.write(require('node:crypto').randomBytes(32).toString('base64url'))"
+```
+
+随后必须从这个 PowerShell 窗口启动 TRSS-Yunzai。关闭窗口后变量会失效。
+
+如果已经复制了前面命令生成的密钥，也可以手动设置：
+
+```powershell
+$env:HOYO_GACHA_MASTER_KEY = "<刚才生成的密钥>"
+```
+
+#### Windows PowerShell：当前用户永久生效
+
+```powershell
+$key = node -e "process.stdout.write(require('node:crypto').randomBytes(32).toString('base64url'))"
+[Environment]::SetEnvironmentVariable("HOYO_GACHA_MASTER_KEY", $key, "User")
+$env:HOYO_GACHA_MASTER_KEY = $key
+Remove-Variable key
+```
+
+设置后请完全关闭并重新打开终端，再重启 TRSS-Yunzai。通过计划任务、面板或服务启动机器人时，还要确认它使用的是设置该变量的同一个 Windows 用户。
+
+#### Linux / macOS：仅当前终端生效
+
+```bash
+export HOYO_GACHA_MASTER_KEY="$(node -e "process.stdout.write(require('node:crypto').randomBytes(32).toString('base64url'))")"
+```
+
+然后从同一终端启动 TRSS-Yunzai。使用 systemd、Docker 或服务器面板时，应在对应服务或容器的环境变量配置中设置 `HOYO_GACHA_MASTER_KEY`，仅在 SSH 终端执行 `export` 不会自动传给已经运行的服务。
+
+#### 验证是否设置成功
+
+验证时只检查变量是否存在和长度，不要输出完整密钥。
+
+Windows PowerShell：
+
+```powershell
+if ($env:HOYO_GACHA_MASTER_KEY) { "已设置，长度：$($env:HOYO_GACHA_MASTER_KEY.Length)" } else { "未设置" }
+```
+
+Linux / macOS：
+
+```bash
+test -n "$HOYO_GACHA_MASTER_KEY" && echo "已设置，长度：${#HOYO_GACHA_MASTER_KEY}" || echo "未设置"
+```
+
+请使用密码管理器保存密钥。密钥丢失或被替换后，插件将无法解密 `data/credentials` 中已有的授权文件；不要在已有凭据仍需使用时重新生成密钥。
 
 重启 TRSS-Yunzai 后，可发送：
 
@@ -57,6 +114,9 @@ node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'
 #抽卡记录-查看原神抽卡记录
 *抽卡记录-查看HSR的
 %抽卡记录-查看ZZZ的
+#查看原神抽卡记录
+#查看星铁抽卡记录
+#查看绝区零抽卡记录
 #导入原神抽卡URL 123456789 https://...
 #导入星铁抽卡URL 100000001 https://...
 #导入绝区零抽卡URL 10000002 https://...
@@ -67,9 +127,11 @@ node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'
 #删除米游社授权 确认
 ```
 
-发送 `#星瀚抽卡帮助` 可查看全部命令和首次使用指引。账号、角色、导入、导出、同步及记录图命令均限制为私聊。URL 导入时，如果已经选中对应游戏角色，可省略 UID。完整授权 URL 只在当前调用内存中使用，不写入记录文件或 authkey 缓存。同步开始时会立即回复，并在每个卡池完成后报告进度；分页基础间隔为 300 ms 并带小幅随机抖动。`#更新全部抽卡记录` 会串行同步三款游戏并在游戏间加入额外抖动，降低触发频控的概率。
+发送 `#星瀚抽卡帮助` 可查看全部命令和首次使用指引。账号、角色、导入、导出、同步及记录图命令均限制为私聊。URL 导入时，如果已经选中对应游戏角色，可省略 UID。完整授权 URL 只在当前调用内存中使用，不写入记录文件或 authkey 缓存。同步开始时会立即回复，并在每个卡池完成后报告进度；分页基础间隔为 300 ms 并带小幅随机抖动。`#更新全部抽卡记录` 会串行处理三款游戏并在游戏间加入额外抖动，降低触发频控的概率。
 
-三种记录查看命令使用不同前缀，避免路由混淆。记录图由 TRSS-Yunzai 的 Puppeteer 渲染器生成；欧非评价只依据本地记录内的高稀有出货区间。限定角色池的 UP/歪标记优先读取记录自带标记，否则用内置常驻角色名单排除判断；缺少名称时显示“待确认”，不冒充确定结果。
+星铁的游戏内跃迁 authkey 与米游社 `genAuthKey` 返回的 Auth Key B 并不等价，后者会被跃迁接口判定为 `authkey error`。因此 `#更新星铁抽卡记录` 和“更新全部”中的星铁步骤会直接给出导入提示，不再重复生成无效凭据；请在私聊中使用 `#导入星铁抽卡URL [UID] URL`。这是星铁当前可靠的同步入口，不影响已导入记录的保存和图片查看。
+
+记录查看推荐使用 `#查看原神抽卡记录`、`#查看星铁抽卡记录`、`#查看绝区零抽卡记录`，以避免部分 TRSS 消息适配器吞掉 `*` 或 `%` 前缀；原来的差异化前缀命令继续兼容。记录图由 TRSS-Yunzai 的 Puppeteer 渲染器生成；欧非评价只依据本地记录内的高稀有出货区间。限定角色池的 UP/歪标记优先读取记录自带标记，否则用内置常驻角色名单排除判断；缺少名称时显示“待确认”，不冒充确定结果。
 
 `#星瀚抽卡更新` 和 `#星瀚抽卡更新日志` 仅允许机器人主人使用。更新命令只接受 `https://github.com/xialuo0511/xinghan-gacha-plugin.git`，要求插件工作区没有本地改动，并使用 `git pull --ff-only` 拉取当前分支；它不会强制覆盖、暂存或删除本地文件，也不会自动执行依赖安装或重启。更新成功后会显示新提交日志；若依赖清单变化，将提示管理员执行 `pnpm install`，随后重启 TRSS-Yunzai。
 

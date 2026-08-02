@@ -89,6 +89,12 @@ export class GameSyncService {
     const adapter = getGameAdapter(this.game)
     const market = adapter.marketForRegion(role.region)
     if (!market) throw new ProtocolError("UNSUPPORTED_REGION", "Game role region is unsupported")
+    if (!parsed && this.game === "starrail") {
+      throw new ProtocolError(
+        "STAR_RAIL_URL_IMPORT_REQUIRED",
+        "Star Rail gacha records require an imported in-game gacha URL",
+      )
+    }
     if (!parsed && market !== "cn") {
       throw new ProtocolError("URL_IMPORT_REQUIRED", "Global roles require a trusted imported URL")
     }

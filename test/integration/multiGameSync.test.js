@@ -92,15 +92,39 @@ function importedUrl(base, params) {
   return url.href
 }
 
-test("syncs all six Star Rail pools with collaboration routing metadata", async context => {
+test("requires an imported in-game URL before Star Rail sync generates an unusable authkey", async context => {
   const { service, generated, requests } = await fixture(
     context,
     StarRailSyncService,
     "starrail",
     starRailRole,
   )
-  const first = await service.sync("user-starrail")
-  const second = await service.sync("user-starrail")
+  await assert.rejects(
+    service.sync("user-starrail"),
+    error => error?.code === "STAR_RAIL_URL_IMPORT_REQUIRED",
+  )
+  assert.equal(generated(), 0)
+  assert.equal(requests.length, 0)
+})
+
+test("imports a CN Star Rail URL and syncs all six pools with collaboration routing", async context => {
+  const { service, generated, requests } = await fixture(
+    context,
+    StarRailSyncService,
+    "starrail",
+    starRailRole,
+  )
+  const url = importedUrl(
+    "https://public-operation-hkrpg.mihoyo.com/common/gacha_record/api/getGachaLog",
+    {
+      game_biz: starRailRole.gameBiz,
+      region: starRailRole.region,
+      gacha_type: "11",
+    },
+  )
+
+  const first = await service.syncImported("user-starrail", url)
+  const second = await service.syncImported("user-starrail", url)
 
   assert.deepEqual(
     first.pools.map(pool => pool.pool),
@@ -113,7 +137,7 @@ test("syncs all six Star Rail pools with collaboration routing metadata", async 
   assert.equal(first.added, 6)
   assert.equal(second.added, 0)
   assert.equal(second.total, 6)
-  assert.equal(generated(), 1)
+  assert.equal(generated(), 0)
   assert.equal(requests.every(request => request.market === "cn"), true)
 })
 

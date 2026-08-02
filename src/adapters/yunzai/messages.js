@@ -13,6 +13,8 @@ const PUBLIC_ERRORS = Object.freeze({
   WRONG_GAME_URL: "该链接所属游戏与导入命令不一致。",
   IMPORTED_ROLE_MISMATCH: "链接区服与所选游戏角色不一致。",
   URL_IMPORT_REQUIRED: "国际服同步需要先私聊导入可信抽卡 URL。",
+  STAR_RAIL_URL_IMPORT_REQUIRED:
+    "星铁跃迁接口不接受扫码授权生成的 authkey；请私聊发送 #导入星铁抽卡URL [UID] URL（已选择角色时可省略 UID）。",
   UNSUPPORTED_REGION: "该角色区服暂不受支持。",
   SYNC_IN_PROGRESS: "该角色已有同步任务正在进行。",
   AUTHKEY_EXPIRED: "抽卡链接中的 authkey 已过期，请重新获取链接。",
