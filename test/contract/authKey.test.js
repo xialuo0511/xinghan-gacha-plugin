@@ -43,6 +43,32 @@ test("generates a Genshin authkey from role data with signed headers", async () 
   assert.match(calls[0].options.headers.ds, /^1700000000,abc123,[a-f0-9]{32}$/)
 })
 
+test("generates authkeys from Star Rail and ZZZ role metadata without hardcoded Genshin fields", async () => {
+  const bodies = []
+  const client = new AuthKeyClient({
+    fetchImpl: async (_url, options) => {
+      bodies.push(JSON.parse(options.body))
+      return response({ retcode: 0, data: { authkey: "fixture-authkey" } })
+    },
+    now: () => 1_700_000_000_000,
+    random: () => "abc123",
+  })
+  const roles = [
+    { gameBiz: "hkrpg_cn", uid: "100000001", region: "prod_gf_cn" },
+    { gameBiz: "nap_cn", uid: "10000002", region: "prod_gf_cn" },
+  ]
+
+  for (const gameRole of roles) await client.generate(credential, gameRole)
+
+  assert.deepEqual(
+    bodies.map(body => ({ game_biz: body.game_biz, game_uid: body.game_uid, region: body.region })),
+    [
+      { game_biz: "hkrpg_cn", game_uid: 100000001, region: "prod_gf_cn" },
+      { game_biz: "nap_cn", game_uid: 10000002, region: "prod_gf_cn" },
+    ],
+  )
+})
+
 test("gacha GET carries neither Cookie nor DS and errors omit authkey", async () => {
   const calls = []
   const client = new GachaApiClient({

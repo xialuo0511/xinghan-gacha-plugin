@@ -107,5 +107,8 @@ test("imports a trusted URL without persisting its authkey", async context => {
   const result = await service.syncImported("user-c", url.href, { uid: role.uid })
   assert.equal(result.added, 5)
   assert.equal(generated(), 0)
-  assert.equal(JSON.stringify(await service.recordStore.load(role)).includes("authkey"), false)
+  assert.equal(
+    JSON.stringify(await service.recordStore.load("user-c", role)).includes("authkey"),
+    false,
+  )
 })
