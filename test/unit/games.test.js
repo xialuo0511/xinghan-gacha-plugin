@@ -68,9 +68,10 @@ test("buildQuery uses end_id and preserves record ids as strings", () => {
     },
     "500",
     "9223372036854775808",
+    "7",
   )
   assert.equal(query.get("end_id"), "9223372036854775808")
-  assert.equal(query.has("page"), false)
+  assert.equal(query.get("page"), "7")
   assert.equal(query.get("size"), "20")
 
   const record = adapter.normalize(

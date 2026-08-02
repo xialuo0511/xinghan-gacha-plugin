@@ -37,7 +37,7 @@ export function createGameAdapter(game, definition) {
     return definition.markets[market].gameBiz
   }
 
-  function buildQuery(auth, poolInput, cursor = "0") {
+  function buildQuery(auth, poolInput, cursor = "0", page = "1") {
     const pool = typeof poolInput === "string" ? poolForQueryType(poolInput) : poolInput
     if (!pool) throw new RangeError("Unsupported gacha pool")
 
@@ -55,6 +55,7 @@ export function createGameAdapter(game, definition) {
       game_biz: expectedGameBiz,
       region: String(auth.region),
       lang: String(auth.lang ?? profile.defaultLanguage),
+      page: requiredString(page, "page"),
       size: profile.pageSize,
       end_id: requiredString(cursor, "cursor"),
     })
@@ -99,6 +100,7 @@ export function createGameAdapter(game, definition) {
       name: optionalString(item.name),
       itemType: optionalString(item.item_type),
       rankType: optionalString(item.rank_type),
+      isUp: optionalString(item.is_up ?? item.isUp),
       count: String(item.count ?? "1"),
       time: requiredString(item.time, "time"),
       lang: String(item.lang ?? context.lang ?? PROTOCOL_PROFILES.gachaQuery.defaultLanguage),

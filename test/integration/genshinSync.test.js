@@ -62,7 +62,8 @@ async function fixture(context, overrides = {}) {
 
 test("syncs all five Genshin pools and the second run adds zero", async context => {
   const { service, generated } = await fixture(context)
-  const first = await service.sync("user-a")
+  const progress = []
+  const first = await service.sync("user-a", { onProgress: event => progress.push(event) })
   const second = await service.sync("user-a")
 
   assert.equal(first.added, 5)
@@ -70,6 +71,16 @@ test("syncs all five Genshin pools and the second run adds zero", async context 
   assert.equal(second.added, 0)
   assert.equal(second.total, 5)
   assert.equal(generated(), 1)
+  assert.deepEqual(
+    progress.map(event => [event.index, event.total, event.poolName, event.status]),
+    [
+      [1, 5, "新手祈愿", "completed"],
+      [2, 5, "常驻祈愿", "completed"],
+      [3, 5, "角色活动祈愿", "completed"],
+      [4, 5, "武器活动祈愿", "completed"],
+      [5, 5, "集录祈愿", "completed"],
+    ],
+  )
 })
 
 test("an expired authkey is refreshed only once", async context => {

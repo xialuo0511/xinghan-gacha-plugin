@@ -16,6 +16,7 @@ import { RecordStore } from "../../storage/recordStore.js"
 import { ExportStore } from "../../storage/exportStore.js"
 import { UigfService } from "../../export/uigfService.js"
 import { GitUpdateService } from "../../update/gitUpdateService.js"
+import { RecordViewService } from "../../view/recordViewService.js"
 
 let runtime
 
@@ -42,6 +43,7 @@ export function getYunzaiRuntime() {
     directory: path.join(pluginRoot, "data", "exports"),
   })
   const updateService = new GitUpdateService({ directory: pluginRoot })
+  const recordViewService = new RecordViewService({ credentialStore, recordStore })
   const uigfService = new UigfService({
     credentialStore,
     recordStore,
@@ -70,6 +72,7 @@ export function getYunzaiRuntime() {
     exportStore,
     uigfService,
     updateService,
+    recordViewService,
     genshinSyncService,
     starRailSyncService,
     zzzSyncService,

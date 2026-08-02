@@ -43,11 +43,12 @@ test("Star Rail routes standard and collaboration pools to separate primary meth
   })
 
   assert.equal(calls[0].pathname.endsWith("/getGachaLog"), true)
-  assert.equal(calls[0].pathname.includes("/hkrpg_gacha_record/"), true)
+  assert.equal(calls[0].pathname.includes("/common/gacha_record/"), true)
   assert.equal(calls[1].pathname.endsWith("/getLdGachaLog"), true)
-  assert.equal(calls[1].pathname.includes("/hkrpg_gacha_record/"), true)
+  assert.equal(calls[1].pathname.includes("/common/gacha_record/"), true)
   assert.equal(calls[0].searchParams.get("gacha_type"), "11")
   assert.equal(calls[1].searchParams.get("gacha_type"), "21")
+  assert.equal(calls[0].searchParams.get("page"), "1")
   assert.equal(calls[0].searchParams.get("region"), "prod_official_eur")
 })
 
@@ -71,8 +72,8 @@ test("Star Rail performs exactly one trusted legacy-path fallback on HTTP 404", 
   })
 
   assert.equal(calls.length, 2)
-  assert.equal(calls[0].pathname.includes("/hkrpg_gacha_record/"), true)
-  assert.equal(calls[1].pathname.includes("/common/gacha_record/"), true)
+  assert.equal(calls[0].pathname.includes("/common/gacha_record/"), true)
+  assert.equal(calls[1].pathname.includes("/hkrpg_gacha_record/"), true)
   assert.equal(calls.every(url => url.hostname === "public-operation-hkrpg.mihoyo.com"), true)
 })
 

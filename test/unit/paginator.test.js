@@ -14,13 +14,15 @@ function normalize(value) {
 
 test("uses the final id as end_id and stops at an existing record", async () => {
   const cursors = []
+  const pageNumbers = []
   const pages = [
     Array.from({ length: 20 }, (_, index) => item(40 - index)),
     Array.from({ length: 20 }, (_, index) => item(20 - index)),
   ]
   const result = await paginateGachaPool({
-    fetchPage: async cursor => {
+    fetchPage: async (cursor, page) => {
       cursors.push(cursor)
+      pageNumbers.push(page)
       return { list: pages.shift() }
     },
     normalize,
@@ -28,6 +30,7 @@ test("uses the final id as end_id and stops at an existing record", async () => 
     pageDelayMs: 0,
   })
   assert.deepEqual(cursors, ["0", "21"])
+  assert.deepEqual(pageNumbers, [1, 2])
   assert.equal(result.records.length, 22)
   assert.equal(result.stopReason, "existing-record")
 })
@@ -57,4 +60,19 @@ test("retries rate limits with exponential backoff", async () => {
   })
   assert.equal(result.records.length, 1)
   assert.deepEqual(delays, [1000, 2000])
+})
+
+test("uses a 300ms default page interval with bounded jitter", async () => {
+  const delays = []
+  const pages = [
+    Array.from({ length: 20 }, (_, index) => item(40 - index)),
+    [item(20)],
+  ]
+  await paginateGachaPool({
+    fetchPage: async () => ({ list: pages.shift() }),
+    normalize,
+    sleep: async delay => delays.push(delay),
+    random: () => 0,
+  })
+  assert.deepEqual(delays, [300])
 })

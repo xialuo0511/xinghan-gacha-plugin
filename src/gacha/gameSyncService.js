@@ -27,7 +27,8 @@ export class GameSyncService {
     authKeyCache,
     gachaClient,
     recordStore,
-    pageDelayMs = 800,
+    pageDelayMs = 300,
+    pageJitterMs = 150,
     sleep,
     random,
   }) {
@@ -40,21 +41,22 @@ export class GameSyncService {
       gachaClient,
       recordStore,
       pageDelayMs,
+      pageJitterMs,
       sleep,
       random,
     })
     this.active = new Set()
   }
 
-  async sync(userId, { uid, signal } = {}) {
+  async sync(userId, { uid, signal, onProgress } = {}) {
     const credential = await this.credentialStore.load(userId)
     if (!credential) throw new ProtocolError("AUTHORIZATION_REQUIRED", "Login authorization is required")
     const role = selectedRole(credential, this.game, uid)
     if (!role) throw new ProtocolError("ROLE_REQUIRED", "A game role must be selected")
-    return this.syncRole({ userId, role, credential, signal })
+    return this.syncRole({ userId, role, credential, signal, onProgress })
   }
 
-  async syncImported(userId, rawUrl, { uid, signal } = {}) {
+  async syncImported(userId, rawUrl, { uid, signal, onProgress } = {}) {
     const parsed = parseGachaUrl(rawUrl)
     if (parsed.game !== this.game) {
       throw new ProtocolError("WRONG_GAME_URL", "Imported URL belongs to another game")
@@ -67,23 +69,23 @@ export class GameSyncService {
     if (role.gameBiz !== parsed.gameBiz || role.region !== parsed.region) {
       throw new ProtocolError("IMPORTED_ROLE_MISMATCH", "Imported URL does not match the selected role")
     }
-    return this.syncRole({ userId, role, credential, parsed, signal })
+    return this.syncRole({ userId, role, credential, parsed, signal, onProgress })
   }
 
-  async syncRole({ userId, role, credential, parsed, signal }) {
+  async syncRole({ userId, role, credential, parsed, signal, onProgress }) {
     const lockKey = `${String(userId)}:${role.gameBiz}:${role.uid}`
     if (this.active.has(lockKey)) {
       throw new ProtocolError("SYNC_IN_PROGRESS", "A sync is already running for this role")
     }
     this.active.add(lockKey)
     try {
-      return await this.performSync({ userId, role, credential, parsed, signal })
+      return await this.performSync({ userId, role, credential, parsed, signal, onProgress })
     } finally {
       this.active.delete(lockKey)
     }
   }
 
-  async performSync({ userId, role, credential, parsed, signal }) {
+  async performSync({ userId, role, credential, parsed, signal, onProgress }) {
     const adapter = getGameAdapter(this.game)
     const market = adapter.marketForRegion(role.region)
     if (!market) throw new ProtocolError("UNSUPPORTED_REGION", "Game role region is unsupported")
@@ -112,21 +114,23 @@ export class GameSyncService {
       lang: parsed?.lang ?? "zh-cn",
     })
 
-    for (const pool of adapter.pools) {
+    for (const [poolIndex, pool] of adapter.pools.entries()) {
       const runPool = () =>
         paginateGachaPool({
-          fetchPage: cursor =>
+          fetchPage: (cursor, page) =>
             this.gachaClient.fetchPage({
               game: this.game,
               market,
               auth: auth(),
               pool,
               cursor,
+              page,
               signal,
             }),
           normalize: item => adapter.normalize(item, { ...role, lang: auth().lang }),
           hasRecord: record => knownIds.has(record.id) || pendingIds.has(record.id),
           pageDelayMs: this.pageDelayMs,
+          pageJitterMs: this.pageJitterMs,
           sleep: this.sleep,
           random: this.random,
         })
@@ -157,15 +161,35 @@ export class GameSyncService {
             stopReason: result.stopReason,
           }),
         )
+        await this.notifyProgress(onProgress, {
+          game: this.game,
+          pool: pool.queryType,
+          poolName: pool.name,
+          index: poolIndex + 1,
+          total: adapter.pools.length,
+          status: "completed",
+          added: result.records.length,
+          pages: result.pages,
+        })
       } catch (error) {
         errors.push(
           Object.freeze({
             pool: pool.queryType,
+            poolName: pool.name,
             endpointKind: pool.endpointKind,
             code: String(error?.code ?? "UNKNOWN_ERROR"),
             retcode: error?.retcode,
           }),
         )
+        await this.notifyProgress(onProgress, {
+          game: this.game,
+          pool: pool.queryType,
+          poolName: pool.name,
+          index: poolIndex + 1,
+          total: adapter.pools.length,
+          status: "failed",
+          code: String(error?.code ?? "UNKNOWN_ERROR"),
+        })
         if (error?.code === "AUTHKEY_EXPIRED") break
       }
     }
@@ -181,5 +205,14 @@ export class GameSyncService {
       pools: Object.freeze(poolResults),
       errors: Object.freeze(errors),
     })
+  }
+
+  async notifyProgress(onProgress, event) {
+    if (typeof onProgress !== "function") return
+    try {
+      await onProgress(Object.freeze(event))
+    } catch {
+      // Reply failures must not cancel an otherwise valid record sync.
+    }
   }
 }

@@ -15,6 +15,7 @@ const RECORD_FIELDS = Object.freeze([
   "name",
   "itemType",
   "rankType",
+  "isUp",
   "count",
   "time",
   "lang",

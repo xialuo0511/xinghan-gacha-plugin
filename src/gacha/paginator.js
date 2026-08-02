@@ -2,11 +2,11 @@ import { ProtocolError } from "../protocol/http.js"
 
 async function fetchWithRateLimitRetry(
   fetchPage,
-  { cursor, maxRetries, sleep, backoffBaseMs, random },
+  { cursor, page, maxRetries, sleep, backoffBaseMs, random },
 ) {
   for (let attempt = 0; ; attempt += 1) {
     try {
-      return await fetchPage(cursor)
+      return await fetchPage(cursor, page)
     } catch (error) {
       if (error?.code !== "RATE_LIMITED" || attempt >= maxRetries) throw error
       const jitter = Math.floor(random() * 300)
@@ -23,7 +23,8 @@ export async function paginateGachaPool({
   maxPages = 100,
   maxRateLimitRetries = 3,
   backoffBaseMs = 1_000,
-  pageDelayMs = 800,
+  pageDelayMs = 300,
+  pageJitterMs = 150,
   sleep = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds)),
   random = Math.random,
 }) {
@@ -36,6 +37,7 @@ export async function paginateGachaPool({
   while (pages < maxPages) {
     const page = await fetchWithRateLimitRetry(fetchPage, {
       cursor,
+      page: pages + 1,
       maxRetries: maxRateLimitRetries,
       sleep,
       backoffBaseMs,
@@ -80,7 +82,7 @@ export async function paginateGachaPool({
       stopReason = "short-page"
       break
     }
-    if (pageDelayMs > 0) await sleep(pageDelayMs + Math.floor(random() * 301))
+    if (pageDelayMs > 0) await sleep(pageDelayMs + Math.floor(random() * (pageJitterMs + 1)))
   }
 
   return Object.freeze({

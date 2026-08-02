@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>绝区零调频记录</title>
+    <link rel="stylesheet" href="{{cssUrl}}">
+    <style>
+      :root {
+        --page-bg: #12130f;
+        --surface: linear-gradient(120deg, rgba(230, 255, 40, 0.06), transparent 24%), #191a16;
+        --text: #e8eadf;
+        --heading: #fcffef;
+        --muted: #9ea38f;
+        --header-text: #11130d;
+        --muted-on-header: #444a2f;
+        --header-bg: linear-gradient(112deg, #dfff32, #f4ff75 58%, #ff6b38 58.5%, #ff8a52);
+        --header-border: #f3ff79;
+        --emblem-bg: #11130d;
+        --emblem-radius: 6px;
+        --chip-bg: rgba(17, 19, 13, 0.11);
+        --chip-border: rgba(17, 19, 13, 0.28);
+        --luck-bg: rgba(17, 19, 13, 0.9);
+        --card-bg: #24261f;
+        --section-bg: #1d1f1a;
+        --highlight-bg: linear-gradient(145deg, #2b2e23, #20221c);
+        --highlight-border: #687229;
+        --line: #3b3f31;
+        --line-soft: #303329;
+        --track: #35382d;
+        --accent: #dfff32;
+        --accent-strong: #e6ff42;
+        --pity-gradient: linear-gradient(90deg, #dfff32, #ffb52f, #ff5947);
+        --row-alt: #20221c;
+        --table-head-bg: #dfff32;
+        --table-head-text: #14150f;
+        --footer-bg: #dfff32;
+        --footer-text: #171910;
+        --display-font: "Arial Black", "Microsoft YaHei", sans-serif;
+        --radius-large: 8px;
+        --radius-medium: 6px;
+        --radius-small: 4px;
+        --shadow: 10px 10px 0 rgba(0, 0, 0, 0.35);
+        --card-shadow: 5px 5px 0 rgba(0, 0, 0, 0.22);
+      }
+
+      #container::before {
+        top: -100px;
+        right: -150px;
+        width: 620px;
+        height: 250px;
+        background: repeating-linear-gradient(-45deg, rgba(223, 255, 50, 0.13) 0 16px, transparent 16px 34px);
+        transform: rotate(9deg);
+      }
+
+      #container::after {
+        bottom: 200px;
+        left: -90px;
+        width: 340px;
+        height: 90px;
+        background: #ff5d3d;
+        opacity: 0.08;
+        transform: rotate(-18deg);
+      }
+
+      .theme-emblem {
+        color: #dfff32;
+        transform: rotate(-4deg);
+      }
+
+      .record-title,
+      .section-title {
+        text-transform: uppercase;
+      }
+
+      .record-header,
+      .metric-card,
+      .record-section,
+      .pool-card,
+      .highlight-card {
+        transform: skewX(-0.5deg);
+      }
+
+      .luck-message,
+      .luck-kicker {
+        color: #e8eadf;
+      }
+    </style>
+  </head>
+  <body class="theme-zzz">
+    <main id="container"></main>
+    <script id="record-data" type="application/json">{{@ viewJson}}</script>
+    <script src="{{scriptUrl}}"></script>
+  </body>
+</html>
