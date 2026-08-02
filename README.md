@@ -41,6 +41,8 @@ node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'
 
 ```text
 #星瀚抽卡帮助
+#星瀚抽卡更新
+#星瀚抽卡更新日志
 #扫码登录
 #取消扫码登录
 #我的游戏角色
@@ -62,6 +64,8 @@ node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'
 ```
 
 发送 `#星瀚抽卡帮助` 可查看全部命令和首次使用指引。账号、角色、导入、导出及同步命令均限制为私聊。URL 导入时，如果已经选中对应游戏角色，可省略 UID。完整授权 URL 只在当前调用内存中使用，不写入记录文件或 authkey 缓存。`#更新全部抽卡记录` 会串行同步三款游戏并在游戏间加入抖动，降低触发频控的概率。
+
+`#星瀚抽卡更新` 和 `#星瀚抽卡更新日志` 仅允许机器人主人使用。更新命令只接受 `https://github.com/xialuo0511/xinghan-gacha-plugin.git`，要求插件工作区没有本地改动，并使用 `git pull --ff-only` 拉取当前分支；它不会强制覆盖、暂存或删除本地文件，也不会自动执行依赖安装或重启。更新成功后会显示新提交日志；若依赖清单变化，将提示管理员执行 `pnpm install`，随后重启 TRSS-Yunzai。
 
 [UIGF](https://uigf.org/zh/standards/uigf.html) 导出文件不含登录凭据。导入前必须已有同游戏、同 UID 的授权角色或记录，插件不会根据 UID 猜测区服；重复导入会按记录 ID 去重。核心实现不依赖喵崽插件，三个 Yunzai 分支的真实文件发送兼容性仍须按[阶段 6 验收清单](docs/live-acceptance.md)逐一验证。
 
@@ -98,6 +102,7 @@ src/export/                 UIGF v4.1 导入导出与旧格式解析
 src/auth/                   扫码、角色、authkey 与短期缓存
 src/storage/                加密凭据和增量记录文件
 src/protocol/               端点、协议 profile、脱敏
+src/update/                 主人专用安全更新与 Git 提交日志
 test/unit/                  纯单元测试
 test/contract/              注册表与安全契约测试
 test/integration/           跨模块状态机和同步测试

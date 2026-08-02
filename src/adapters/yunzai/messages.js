@@ -24,6 +24,11 @@ const PUBLIC_ERRORS = Object.freeze({
   IMPORT_ROLE_REQUIRED: "导入文件中有未绑定的游戏 UID，请先扫码登录或用该 UID 导入一次抽卡 URL。",
   IMPORT_CONTENT_REQUIRED: "请在命令后粘贴 UIGF JSON，或以机器人可读取的文件内容发送。",
   FILE_SEND_UNAVAILABLE: "当前机器人适配器无法发送文件，请联系管理员检查文件发送能力。",
+  UPDATE_IN_PROGRESS: "星瀚抽卡插件正在更新，请勿重复操作。",
+  UPDATE_DIRTY: "插件目录存在本地改动或未跟踪文件，为避免覆盖数据已停止更新。",
+  UPDATE_UNTRUSTED_REMOTE: "插件 Git 远端不是官方项目仓库，已拒绝更新。",
+  UPDATE_DETACHED: "插件当前不在可更新的 Git 分支上，请管理员检查安装状态。",
+  UPDATE_FAILED: "插件更新失败，请管理员检查网络、Git 权限和仓库状态。",
 })
 
 export function publicErrorMessage(error) {

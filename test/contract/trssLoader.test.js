@@ -24,7 +24,14 @@ test("TRSS-style root loader imports every app class", async context => {
   )
 
   const loaded = await import(`${pathToFileURL(path.join(pluginRoot, "index.js")).href}?smoke=1`)
-  assert.deepEqual(Object.keys(loaded.apps), ["account", "gacha", "help", "login", "status"])
+  assert.deepEqual(Object.keys(loaded.apps), [
+    "account",
+    "gacha",
+    "help",
+    "login",
+    "status",
+    "update",
+  ])
   for (const App of Object.values(loaded.apps)) {
     const instance = new App()
     assert.ok(Array.isArray(instance.rule))
@@ -49,4 +56,15 @@ test("TRSS-style root loader imports every app class", async context => {
 
   const help = new loaded.apps.help()
   assert.equal(help.rule.some(rule => new RegExp(rule.reg).test("#星瀚抽卡帮助")), true)
+
+  const update = new loaded.apps.update()
+  for (const command of ["#星瀚抽卡更新", "#星瀚抽卡更新日志"]) {
+    const rule = update.rule.find(value => new RegExp(value.reg).test(command))
+    assert.equal(rule?.permission, "master")
+  }
+  const replies = []
+  update.e = { isMaster: false }
+  update.reply = async message => replies.push(message)
+  await update.update()
+  assert.match(replies[0], /只有机器人主人/)
 })

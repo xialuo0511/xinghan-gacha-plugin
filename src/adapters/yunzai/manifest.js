@@ -5,6 +5,8 @@ export const YUNZAI_MANIFEST = Object.freeze({
   milestone: 5,
   commands: Object.freeze([
     "#星瀚抽卡帮助",
+    "#星瀚抽卡更新",
+    "#星瀚抽卡更新日志",
     "#抽卡插件状态",
     "#扫码登录",
     "#取消扫码登录",
