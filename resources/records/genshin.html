@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>原神祈愿记录</title>
+    <link rel="stylesheet" href="{{cssUrl}}">
+    <style>
+      :root {
+        --page-bg: #e8e2d3;
+        --surface: radial-gradient(circle at 12% 4%, #e8f5f0 0, transparent 27%), #f4efe3;
+        --text: #40504d;
+        --heading: #314b49;
+        --muted: #7a8984;
+        --header-text: #f8fffc;
+        --muted-on-header: #cce4dc;
+        --header-bg: linear-gradient(135deg, #173f3d, #2f6a64 67%, #94733d);
+        --header-border: rgba(236, 215, 148, 0.55);
+        --emblem-bg: rgba(238, 214, 143, 0.1);
+        --emblem-radius: 50% 16% 50% 16%;
+        --chip-bg: rgba(239, 224, 176, 0.1);
+        --chip-border: rgba(239, 224, 176, 0.33);
+        --luck-bg: rgba(6, 31, 30, 0.42);
+        --card-bg: rgba(255, 253, 247, 0.92);
+        --section-bg: rgba(249, 246, 237, 0.9);
+        --highlight-bg: linear-gradient(145deg, #fffdf6, #f1e7cc);
+        --highlight-border: #dfc885;
+        --line: #d8d1bd;
+        --line-soft: #e8e2d4;
+        --track: #ded8c8;
+        --accent: #65a69b;
+        --accent-strong: #b6812f;
+        --pity-gradient: linear-gradient(90deg, #68b6aa, #e2b95c);
+        --row-alt: #f7f2e7;
+        --table-head-bg: #3d6964;
+        --table-head-text: #f7fff9;
+        --footer-bg: #315b57;
+        --footer-text: #deeee9;
+        --display-font: "STKaiti", "KaiTi", "Microsoft YaHei", sans-serif;
+        --radius-large: 22px 8px 22px 8px;
+        --radius-medium: 15px 5px 15px 5px;
+        --radius-small: 12px 4px 12px 4px;
+        --shadow: 0 18px 40px rgba(40, 68, 62, 0.18);
+        --card-shadow: 0 8px 20px rgba(70, 77, 62, 0.08);
+      }
+
+      #container::before {
+        top: -90px;
+        right: -60px;
+        width: 350px;
+        height: 350px;
+        border: 2px solid rgba(80, 139, 128, 0.14);
+        border-radius: 50%;
+        box-shadow: 0 0 0 28px rgba(184, 145, 71, 0.05), 0 0 0 58px rgba(80, 139, 128, 0.04);
+      }
+
+      #container::after {
+        bottom: 70px;
+        left: -110px;
+        width: 260px;
+        height: 260px;
+        background: conic-gradient(from 45deg, transparent, rgba(102, 170, 157, 0.12), transparent 48%);
+        transform: rotate(22deg);
+      }
+    </style>
+  </head>
+  <body class="theme-genshin">
+    <main id="container"></main>
+    <script id="record-data" type="application/json">{{@ viewJson}}</script>
+    <script src="{{scriptUrl}}"></script>
+  </body>
+</html>

@@ -32,22 +32,22 @@ export const GACHA_ENDPOINTS = Object.freeze({
       standard: Object.freeze([
         endpoint(
           "starrail-cn-primary",
-          "https://public-operation-hkrpg.mihoyo.com/common/hkrpg_gacha_record/api/getGachaLog",
+          "https://public-operation-hkrpg.mihoyo.com/common/gacha_record/api/getGachaLog",
         ),
         endpoint(
           "starrail-cn-legacy",
-          "https://public-operation-hkrpg.mihoyo.com/common/gacha_record/api/getGachaLog",
+          "https://public-operation-hkrpg.mihoyo.com/common/hkrpg_gacha_record/api/getGachaLog",
           { fallback: true },
         ),
       ]),
       collaboration: Object.freeze([
         endpoint(
           "starrail-cn-collaboration",
-          "https://public-operation-hkrpg.mihoyo.com/common/hkrpg_gacha_record/api/getLdGachaLog",
+          "https://public-operation-hkrpg.mihoyo.com/common/gacha_record/api/getLdGachaLog",
         ),
         endpoint(
           "starrail-cn-collaboration-legacy",
-          "https://public-operation-hkrpg.mihoyo.com/common/gacha_record/api/getLdGachaLog",
+          "https://public-operation-hkrpg.mihoyo.com/common/hkrpg_gacha_record/api/getLdGachaLog",
           { fallback: true },
         ),
       ]),
@@ -56,22 +56,22 @@ export const GACHA_ENDPOINTS = Object.freeze({
       standard: Object.freeze([
         endpoint(
           "starrail-global-primary",
-          "https://public-operation-hkrpg-sg.hoyoverse.com/common/hkrpg_gacha_record/api/getGachaLog",
+          "https://public-operation-hkrpg-sg.hoyoverse.com/common/gacha_record/api/getGachaLog",
         ),
         endpoint(
           "starrail-global-legacy",
-          "https://public-operation-hkrpg-sg.hoyoverse.com/common/gacha_record/api/getGachaLog",
+          "https://public-operation-hkrpg-sg.hoyoverse.com/common/hkrpg_gacha_record/api/getGachaLog",
           { fallback: true },
         ),
       ]),
       collaboration: Object.freeze([
         endpoint(
           "starrail-global-collaboration",
-          "https://public-operation-hkrpg-sg.hoyoverse.com/common/hkrpg_gacha_record/api/getLdGachaLog",
+          "https://public-operation-hkrpg-sg.hoyoverse.com/common/gacha_record/api/getLdGachaLog",
         ),
         endpoint(
           "starrail-global-collaboration-legacy",
-          "https://public-operation-hkrpg-sg.hoyoverse.com/common/gacha_record/api/getLdGachaLog",
+          "https://public-operation-hkrpg-sg.hoyoverse.com/common/hkrpg_gacha_record/api/getLdGachaLog",
           { fallback: true },
         ),
       ]),

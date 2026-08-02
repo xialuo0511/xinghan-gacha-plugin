@@ -13,7 +13,7 @@ export class GachaApiClient {
     this.fetchImpl = fetchImpl
   }
 
-  async fetchPage({ game, market, auth, pool, cursor = "0", signal }) {
+  async fetchPage({ game, market, auth, pool, cursor = "0", page = 1, signal }) {
     const adapter = getGameAdapter(game)
     const candidates = getEndpointCandidates(game, market, pool.endpointKind)
     let lastError
@@ -21,7 +21,7 @@ export class GachaApiClient {
     for (let index = 0; index < candidates.length; index += 1) {
       const endpoint = candidates[index]
       const url = new URL(endpoint.url)
-      url.search = adapter.buildQuery(auth, pool, cursor)
+      url.search = adapter.buildQuery(auth, pool, cursor, page)
       try {
         const response = await requestJson(this.fetchImpl, { url, signal })
         const payload = response.data

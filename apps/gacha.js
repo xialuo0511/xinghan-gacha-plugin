@@ -13,8 +13,17 @@ const GAMES = Object.freeze({
 const GAME_ORDER = Object.freeze(["genshin", "starrail", "zzz"])
 
 function resultMessage(result) {
-  const failed = result.errors.length ? `；${result.errors.length} 个池失败` : ""
+  const failed = result.errors.length
+    ? `；失败：${result.errors.map(error => `${error.poolName ?? error.pool}(${error.code})`).join("、")}`
+    : ""
   return `${GAMES[result.game].name}抽卡记录同步完成：新增 ${result.added} 条，本地共 ${result.total} 条${failed}。`
+}
+
+function progressMessage(game, progress) {
+  const prefix = `${GAMES[game].name}进度 ${progress.index}/${progress.total}：${progress.poolName}`
+  return progress.status === "completed"
+    ? `${prefix}完成，读取 ${progress.pages} 页，发现 ${progress.added} 条新记录。`
+    : `${prefix}失败（${progress.code}），将继续尝试其他卡池。`
 }
 
 function importParts(message, game) {
@@ -66,9 +75,12 @@ export class gacha extends plugin {
 
   async syncGame(game) {
     if (!privateOnly(this)) return true
+    await this.reply(`开始获取${GAMES[game].name}抽卡记录，请稍候……`)
     try {
       const runtime = getYunzaiRuntime()
-      const result = await runtime[GAMES[game].service].sync(String(this.e.user_id))
+      const result = await runtime[GAMES[game].service].sync(String(this.e.user_id), {
+        onProgress: progress => this.reply(progressMessage(game, progress)),
+      })
       await this.reply(resultMessage(result))
     } catch (error) {
       await this.reply(publicErrorMessage(error))
@@ -92,9 +104,12 @@ export class gacha extends plugin {
     if (!privateOnly(this)) return true
     const runtime = getYunzaiRuntime()
     const messages = []
+    await this.reply("开始依次获取原神、星铁和绝区零抽卡记录，请稍候……")
     for (const [index, game] of GAME_ORDER.entries()) {
       try {
-        const result = await runtime[GAMES[game].service].sync(String(this.e.user_id))
+        const result = await runtime[GAMES[game].service].sync(String(this.e.user_id), {
+          onProgress: progress => this.reply(progressMessage(game, progress)),
+        })
         messages.push(resultMessage(result))
       } catch (error) {
         messages.push(`${GAMES[game].name}：${publicErrorMessage(error)}`)
@@ -115,10 +130,12 @@ export class gacha extends plugin {
       await this.reply(`格式错误：#导入${GAMES[game].name}抽卡URL [UID] URL`)
       return true
     }
+    await this.reply(`开始从安全链接获取${GAMES[game].name}抽卡记录，请稍候……`)
     try {
       const runtime = getYunzaiRuntime()
       const result = await runtime[GAMES[game].service].syncImported(String(this.e.user_id), url, {
         uid,
+        onProgress: progress => this.reply(progressMessage(game, progress)),
       })
       await this.reply(resultMessage(result))
     } catch (error) {

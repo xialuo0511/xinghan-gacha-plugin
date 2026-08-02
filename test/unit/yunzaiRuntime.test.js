@@ -8,6 +8,7 @@ import {
 import { UigfService } from "../../src/export/uigfService.js"
 import { ExportStore } from "../../src/storage/exportStore.js"
 import { GitUpdateService } from "../../src/update/gitUpdateService.js"
+import { RecordViewService } from "../../src/view/recordViewService.js"
 
 test("exposes export, UIGF, and update services to Yunzai apps", context => {
   const previousRedis = globalThis.redis
@@ -26,4 +27,5 @@ test("exposes export, UIGF, and update services to Yunzai apps", context => {
   assert.ok(runtime.exportStore instanceof ExportStore)
   assert.ok(runtime.uigfService instanceof UigfService)
   assert.ok(runtime.updateService instanceof GitUpdateService)
+  assert.ok(runtime.recordViewService instanceof RecordViewService)
 })

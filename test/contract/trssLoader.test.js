@@ -22,6 +22,13 @@ test("TRSS-style root loader imports every app class", async context => {
     "export default class plugin { constructor(options) { Object.assign(this, options) } reply() {} }\n",
     "utf8",
   )
+  const puppeteerBase = path.join(root, "lib", "puppeteer")
+  await mkdir(puppeteerBase, { recursive: true })
+  await writeFile(
+    path.join(puppeteerBase, "puppeteer.js"),
+    "export default { screenshot: async () => ({ type: 'image' }) }\n",
+    "utf8",
+  )
 
   const loaded = await import(`${pathToFileURL(path.join(pluginRoot, "index.js")).href}?smoke=1`)
   assert.deepEqual(Object.keys(loaded.apps), [
@@ -29,6 +36,7 @@ test("TRSS-style root loader imports every app class", async context => {
     "gacha",
     "help",
     "login",
+    "records",
     "status",
     "update",
   ])
@@ -56,6 +64,15 @@ test("TRSS-style root loader imports every app class", async context => {
 
   const help = new loaded.apps.help()
   assert.equal(help.rule.some(rule => new RegExp(rule.reg).test("#星瀚抽卡帮助")), true)
+
+  const records = new loaded.apps.records()
+  for (const command of [
+    "#抽卡记录-查看原神抽卡记录",
+    "*抽卡记录-查看HSR的",
+    "%抽卡记录-查看ZZZ的",
+  ]) {
+    assert.equal(records.rule.some(rule => new RegExp(rule.reg).test(command)), true)
+  }
 
   const update = new loaded.apps.update()
   for (const command of ["#星瀚抽卡更新", "#星瀚抽卡更新日志"]) {

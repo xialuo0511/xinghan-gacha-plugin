@@ -20,6 +20,7 @@
     "lint": "node scripts/lint.js",
     "test": "node --test",
     "check": "npm run lint && npm test",
+    "preview:records": "node scripts/preview-records.js",
     "smoke:live": "node scripts/live-smoke.js"
   }
 }
