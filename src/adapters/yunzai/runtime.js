@@ -10,6 +10,8 @@ import { MemoryAuthKeyCache } from "../../auth/authKeyCache.js"
 import { AuthKeyClient } from "../../auth/authKeyClient.js"
 import { GachaApiClient } from "../../gacha/gachaApiClient.js"
 import { GenshinSyncService } from "../../gacha/genshinSyncService.js"
+import { StarRailSyncService } from "../../gacha/starRailSyncService.js"
+import { ZzzSyncService } from "../../gacha/zzzSyncService.js"
 import { RecordStore } from "../../storage/recordStore.js"
 
 let runtime
@@ -32,12 +34,20 @@ export function getYunzaiRuntime() {
   const recordStore = new RecordStore({
     directory: path.join(process.cwd(), "plugins", "xinghan-gacha-plugin", "data", "records"),
   })
-  const genshinSyncService = new GenshinSyncService({
+  const syncDependencies = {
     credentialStore,
     authKeyClient: new AuthKeyClient(),
     authKeyCache,
     gachaClient: new GachaApiClient(),
     recordStore,
+  }
+  const genshinSyncService = new GenshinSyncService(syncDependencies)
+  const starRailSyncService = new StarRailSyncService(syncDependencies)
+  const zzzSyncService = new ZzzSyncService(syncDependencies)
+  const syncServices = Object.freeze({
+    genshin: genshinSyncService,
+    starrail: starRailSyncService,
+    zzz: zzzSyncService,
   })
   runtime = Object.freeze({
     credentialStore,
@@ -45,6 +55,9 @@ export function getYunzaiRuntime() {
     authKeyCache,
     recordStore,
     genshinSyncService,
+    starRailSyncService,
+    zzzSyncService,
+    syncServices,
   })
   return runtime
 }

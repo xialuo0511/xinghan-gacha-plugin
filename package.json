@@ -1,7 +1,12 @@
 {
   "name": "xinghan-gacha-plugin",
   "version": "0.1.0",
-  "description": "TRSS-Yunzai plugin foundation for secure HoYoverse gacha record imports.",
+  "description": "Secure three-game gacha record sync plugin for TRSS-Yunzai.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xialuo0511/xinghan-gacha-plugin.git"
+  },
+  "homepage": "https://github.com/xialuo0511/xinghan-gacha-plugin",
   "type": "module",
   "private": true,
   "license": "UNLICENSED",

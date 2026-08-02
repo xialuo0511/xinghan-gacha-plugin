@@ -1,6 +1,6 @@
 # xinghan-gacha-plugin
 
-面向 TRSS-Yunzai 的米哈游三游戏抽卡记录插件。目前完成开发规划的里程碑 0、1、2：
+面向 TRSS-Yunzai 的米哈游三游戏抽卡记录插件。目前完成开发规划的里程碑 0–4：
 
 - TRSS-Yunzai ESM 插件入口与私聊命令；
 - 原神、星穹铁道、绝区零的静态协议/池类型注册表；
@@ -9,17 +9,19 @@
 - 国服米游社 App 二维码登录、Redis 会话互斥及三游戏角色发现；
 - AES-256-GCM 凭据存储；未提供主密钥时仅保存在当前进程内存；
 - 原神 `100/200/301/302/500` 五池 authkey 拉取、分页、退避和增量存储；
-- 原神可信抽卡 URL 手动导入；
+- 星铁 `1/2/11/12/21/22` 六池同步，联动池独立路由和可信旧路径回退；
+- 绝区零 `1/2/3/5/102/103` 六池同步及长短池类型映射；
+- 三游戏可信抽卡 URL 手动导入，支持国服和国际服白名单端点；
 - 不依赖 Yunzai 全局对象的单元测试和契约测试。
 
-当前版本**尚未实现**星铁/绝区零抽卡同步、UIGF 导出、旧数据迁移及真实账号验收。接口均为非官方接口，可能随时变化；二维码、DS 和客户端 profile 来自 2026-05-31 的公开实现快照，首次使用前仍应以专门测试账号烟雾验证。
+当前版本**尚未实现** UIGF 导出、旧数据迁移及真实账号验收。接口均为非官方接口，可能随时变化；二维码、DS 和客户端 profile 来自 2026-05-31 的公开实现快照，首次使用前仍应以专门测试账号烟雾验证。国际服当前仅支持可信抽卡 URL 导入，不支持使用国服米游社凭据生成 authkey。
 
 ## 安装到 TRSS-Yunzai
 
 将仓库放在 TRSS-Yunzai 的 `plugins/xinghan-gacha-plugin`：
 
 ```bash
-git clone <repository-url> plugins/xinghan-gacha-plugin
+git clone https://github.com/xialuo0511/xinghan-gacha-plugin.git plugins/xinghan-gacha-plugin
 cd plugins/xinghan-gacha-plugin
 pnpm install
 pnpm check
@@ -43,12 +45,17 @@ node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'
 #选择星铁 100000001
 #选择绝区零 10000002
 #更新原神抽卡记录
+#更新星铁抽卡记录
+#更新绝区零抽卡记录
+#更新全部抽卡记录
 #导入原神抽卡URL 123456789 https://...
+#导入星铁抽卡URL 100000001 https://...
+#导入绝区零抽卡URL 10000002 https://...
 #删除米游社授权
 #删除米游社授权 确认
 ```
 
-上述账号、角色、导入及同步命令均限制为私聊。URL 导入时，如果已经选中原神角色，可省略 UID。完整授权 URL 只在当前调用内存中使用，不写入记录文件或 authkey 缓存。
+上述账号、角色、导入及同步命令均限制为私聊。URL 导入时，如果已经选中对应游戏角色，可省略 UID。完整授权 URL 只在当前调用内存中使用，不写入记录文件或 authkey 缓存。`#更新全部抽卡记录` 会串行同步三款游戏并在游戏间加入抖动，降低触发频控的概率。
 
 本插件按当前 TRSS-Yunzai 的运行要求声明 Node.js `>=23.11.0`。
 
@@ -77,7 +84,7 @@ pnpm check
 apps/                       TRSS-Yunzai 命令入口
 src/adapters/yunzai/        平台适配元数据
 src/games/                  三游戏定义与适配器
-src/gacha/                  安全 URL 解析/重建
+src/gacha/                  安全 URL 解析/重建与三游戏同步
 src/auth/                   扫码、角色、authkey 与短期缓存
 src/storage/                加密凭据和增量记录文件
 src/protocol/               端点、协议 profile、脱敏

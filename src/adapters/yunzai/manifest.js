@@ -2,7 +2,7 @@ export const YUNZAI_MANIFEST = Object.freeze({
   id: "xinghan-gacha-plugin",
   name: "米游社三游戏抽卡记录",
   platforms: Object.freeze(["TRSS-Yunzai"]),
-  milestone: 2,
+  milestone: 4,
   commands: Object.freeze([
     "#抽卡插件状态",
     "#扫码登录",
@@ -13,6 +13,11 @@ export const YUNZAI_MANIFEST = Object.freeze({
     "#选择绝区零 <UID>",
     "#删除米游社授权",
     "#更新原神抽卡记录",
+    "#更新星铁抽卡记录",
+    "#更新绝区零抽卡记录",
+    "#更新全部抽卡记录",
     "#导入原神抽卡URL [UID] <URL>",
+    "#导入星铁抽卡URL [UID] <URL>",
+    "#导入绝区零抽卡URL [UID] <URL>",
   ]),
 })

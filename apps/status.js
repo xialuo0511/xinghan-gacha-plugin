@@ -19,9 +19,9 @@ export class status extends plugin {
   async status() {
     return this.reply(
       [
-        "xinghan-gacha-plugin 里程碑 0-2 已实现。",
-        "已实现：安全 URL 解析、国服扫码与角色发现、原神五池增量同步。",
-        "尚未完成：星铁/绝区零同步、UIGF 导出和真实账号验收。",
+        "xinghan-gacha-plugin 里程碑 0-4 已实现。",
+        "已实现：安全 URL 解析、国服扫码与角色发现、三游戏全池增量同步。",
+        "尚未完成：UIGF 导出、旧数据迁移和真实账号验收。",
       ].join("\n"),
     )
   }

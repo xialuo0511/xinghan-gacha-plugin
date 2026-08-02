@@ -28,5 +28,20 @@ test("TRSS-style root loader imports every app class", async context => {
   for (const App of Object.values(loaded.apps)) {
     const instance = new App()
     assert.ok(Array.isArray(instance.rule))
+    for (const rule of instance.rule) assert.equal(typeof instance[rule.fnc], "function")
+  }
+
+  const gacha = new loaded.apps.gacha()
+  const commands = [
+    "#更新原神抽卡记录",
+    "#更新星铁抽卡记录",
+    "#更新绝区零抽卡记录",
+    "#更新全部抽卡记录",
+    "#导入原神抽卡URL 123456789 https://example.test",
+    "#导入星铁抽卡URL 100000001 https://example.test",
+    "#导入绝区零抽卡URL 10000002 https://example.test",
+  ]
+  for (const command of commands) {
+    assert.equal(gacha.rule.some(rule => new RegExp(rule.reg).test(command)), true)
   }
 })

@@ -14,6 +14,13 @@ test("Genshin covers all planned pools and canonicalizes response type 400", () 
 
 test("Star Rail collaboration pools use the collaboration endpoint kind", () => {
   const adapter = getGameAdapter("starrail")
+  assert.deepEqual(
+    adapter.pools.map(pool => pool.queryType),
+    ["1", "2", "11", "12", "21", "22"],
+  )
+  for (const type of ["1", "2", "11", "12"]) {
+    assert.equal(adapter.poolForQueryType(type).endpointKind, "standard")
+  }
   assert.equal(adapter.poolForQueryType("21").endpointKind, "collaboration")
   assert.equal(adapter.poolForQueryType("22").endpointKind, "collaboration")
   assert.equal(adapter.markets.global.regions.includes("prod_official_eur"), true)
@@ -33,6 +40,20 @@ test("ZZZ maps short and long pool types", () => {
   for (const [shortType, longType] of Object.entries(cases)) {
     assert.equal(adapter.poolForQueryType(shortType).longType, longType)
     assert.equal(adapter.poolForQueryType(longType).queryType, shortType)
+    const query = adapter.buildQuery(
+      {
+        authkey: "fixture-token",
+        gameBiz: "nap_cn",
+        region: "prod_gf_cn",
+        lang: "zh-cn",
+      },
+      shortType,
+      "0",
+    )
+    assert.equal(query.get("real_gacha_type"), shortType)
+    assert.equal(query.get("gacha_type"), longType)
+    assert.equal(query.get("init_log_gacha_type"), longType)
+    assert.equal(query.get("init_log_gacha_base_type"), shortType)
   }
 })
 
