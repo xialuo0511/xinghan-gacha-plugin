@@ -24,7 +24,7 @@ test("TRSS-style root loader imports every app class", async context => {
   )
 
   const loaded = await import(`${pathToFileURL(path.join(pluginRoot, "index.js")).href}?smoke=1`)
-  assert.deepEqual(Object.keys(loaded.apps), ["account", "gacha", "login", "status"])
+  assert.deepEqual(Object.keys(loaded.apps), ["account", "gacha", "help", "login", "status"])
   for (const App of Object.values(loaded.apps)) {
     const instance = new App()
     assert.ok(Array.isArray(instance.rule))
@@ -37,6 +37,8 @@ test("TRSS-style root loader imports every app class", async context => {
     "#更新星铁抽卡记录",
     "#更新绝区零抽卡记录",
     "#更新全部抽卡记录",
+    "#导出抽卡记录",
+    "#导入抽卡记录 {\"info\":{}}",
     "#导入原神抽卡URL 123456789 https://example.test",
     "#导入星铁抽卡URL 100000001 https://example.test",
     "#导入绝区零抽卡URL 10000002 https://example.test",
@@ -44,4 +46,7 @@ test("TRSS-style root loader imports every app class", async context => {
   for (const command of commands) {
     assert.equal(gacha.rule.some(rule => new RegExp(rule.reg).test(command)), true)
   }
+
+  const help = new loaded.apps.help()
+  assert.equal(help.rule.some(rule => new RegExp(rule.reg).test("#星瀚抽卡帮助")), true)
 })

@@ -151,7 +151,7 @@ test("syncs and canonicalizes all six ZZZ short and long pool types", async cont
   const { service, generated } = await fixture(context, ZzzSyncService, "zzz", zzzRole)
   const first = await service.sync("user-zzz")
   const second = await service.sync("user-zzz")
-  const stored = await service.recordStore.load(zzzRole)
+  const stored = await service.recordStore.load("user-zzz", zzzRole)
 
   assert.deepEqual(
     first.pools.map(pool => pool.pool),
@@ -186,7 +186,7 @@ test("imports a trusted ZZZ common-alias URL without persisting authkey", async 
   )
 
   const result = await service.syncImported("user-zzz-import", url, { uid: zzzRole.uid })
-  const stored = await service.recordStore.load(zzzRole)
+  const stored = await service.recordStore.load("user-zzz-import", zzzRole)
   assert.equal(result.added, 6)
   assert.equal(generated(), 0)
   assert.equal(requests.every(request => request.game === "zzz"), true)

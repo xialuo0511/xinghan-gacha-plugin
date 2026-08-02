@@ -19,6 +19,11 @@ const PUBLIC_ERRORS = Object.freeze({
   RATE_LIMITED: "访问过于频繁，请稍后重试。",
   UNTRUSTED_ENDPOINT: "抽卡链接域名或路径不在白名单中。",
   HTTPS_REQUIRED: "抽卡链接必须使用 HTTPS。",
+  NO_GACHA_RECORDS: "还没有可导出的抽卡记录，请先更新或导入记录。",
+  INVALID_UIGF: "文件不是受支持的 UIGF v4.x、旧版 UIGF 或 SRGF 数据。",
+  IMPORT_ROLE_REQUIRED: "导入文件中有未绑定的游戏 UID，请先扫码登录或用该 UID 导入一次抽卡 URL。",
+  IMPORT_CONTENT_REQUIRED: "请在命令后粘贴 UIGF JSON，或以机器人可读取的文件内容发送。",
+  FILE_SEND_UNAVAILABLE: "当前机器人适配器无法发送文件，请联系管理员检查文件发送能力。",
 })
 
 export function publicErrorMessage(error) {

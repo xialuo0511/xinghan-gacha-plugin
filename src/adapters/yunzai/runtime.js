@@ -13,6 +13,8 @@ import { GenshinSyncService } from "../../gacha/genshinSyncService.js"
 import { StarRailSyncService } from "../../gacha/starRailSyncService.js"
 import { ZzzSyncService } from "../../gacha/zzzSyncService.js"
 import { RecordStore } from "../../storage/recordStore.js"
+import { ExportStore } from "../../storage/exportStore.js"
+import { UigfService } from "../../export/uigfService.js"
 
 let runtime
 
@@ -34,12 +36,22 @@ export function getYunzaiRuntime() {
   const recordStore = new RecordStore({
     directory: path.join(process.cwd(), "plugins", "xinghan-gacha-plugin", "data", "records"),
   })
+  const exportStore = new ExportStore({
+    directory: path.join(process.cwd(), "plugins", "xinghan-gacha-plugin", "data", "exports"),
+  })
+  const uigfService = new UigfService({
+    credentialStore,
+    recordStore,
+    appVersion: "0.1.0",
+  })
   const syncDependencies = {
     credentialStore,
     authKeyClient: new AuthKeyClient(),
     authKeyCache,
     gachaClient: new GachaApiClient(),
     recordStore,
+    exportStore,
+    uigfService,
   }
   const genshinSyncService = new GenshinSyncService(syncDependencies)
   const starRailSyncService = new StarRailSyncService(syncDependencies)

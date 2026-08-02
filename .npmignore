@@ -4,7 +4,6 @@ coverage/
 data/
 temp/
 test/
-scripts/
 *.log
 .env
 .env.*

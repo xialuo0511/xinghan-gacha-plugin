@@ -19,6 +19,7 @@
   "scripts": {
     "lint": "node scripts/lint.js",
     "test": "node --test",
-    "check": "npm run lint && npm test"
+    "check": "npm run lint && npm test",
+    "smoke:live": "node scripts/live-smoke.js"
   }
 }

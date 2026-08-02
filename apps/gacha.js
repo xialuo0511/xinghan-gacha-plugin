@@ -1,7 +1,9 @@
 import plugin from "../../../lib/plugins/plugin.js"
 
 import { privateOnly, publicErrorMessage } from "../src/adapters/yunzai/messages.js"
+import { importContent, sendPrivateFile } from "../src/adapters/yunzai/files.js"
 import { getYunzaiRuntime } from "../src/adapters/yunzai/runtime.js"
+import { ProtocolError } from "../src/protocol/http.js"
 
 const GAMES = Object.freeze({
   genshin: Object.freeze({ name: "原神", service: "genshinSyncService" }),
@@ -41,6 +43,8 @@ export class gacha extends plugin {
         { reg: "^#?更新星铁抽卡记录$", fnc: "syncStarRail", log: false },
         { reg: "^#?更新绝区零抽卡记录$", fnc: "syncZzz", log: false },
         { reg: "^#?更新全部抽卡记录$", fnc: "syncAll", log: false },
+        { reg: "^#?导出抽卡记录$", fnc: "exportUigf", log: false },
+        { reg: "^#?导入抽卡记录(?:\\s+[\\s\\S]+)?$", fnc: "importUigf", log: false },
         {
           reg: "^#?导入原神抽卡URL(?:\\s+\\d{6,12})?\\s+https://\\S+$",
           fnc: "importGenshinUrl",
@@ -133,5 +137,44 @@ export class gacha extends plugin {
 
   importZzzUrl() {
     return this.importGameUrl("zzz")
+  }
+
+  async exportUigf() {
+    if (!privateOnly(this)) return true
+    try {
+      const runtime = getYunzaiRuntime()
+      const result = await runtime.uigfService.export(String(this.e.user_id))
+      const filePath = await runtime.exportStore.write(
+        String(this.e.user_id),
+        result.filename,
+        result.json,
+      )
+      await sendPrivateFile(this, filePath, result.filename)
+      await this.reply(`UIGF 导出完成：${result.accounts} 个账号，共 ${result.records} 条记录。`)
+    } catch (error) {
+      await this.reply(publicErrorMessage(error))
+    }
+    return true
+  }
+
+  async importUigf() {
+    if (!privateOnly(this)) return true
+    const content = importContent(this.e)
+    this.e.msg = "#导入抽卡记录 [REDACTED]"
+    this.e.raw_message = this.e.msg
+    if (!content) {
+      await this.reply(publicErrorMessage(new ProtocolError("IMPORT_CONTENT_REQUIRED", "Missing import")))
+      return true
+    }
+    try {
+      const runtime = getYunzaiRuntime()
+      const result = await runtime.uigfService.import(String(this.e.user_id), content)
+      await this.reply(
+        `UIGF 导入完成：${result.accounts} 个账号，新增 ${result.added} 条，账号合计 ${result.total} 条。`,
+      )
+    } catch (error) {
+      await this.reply(publicErrorMessage(error))
+    }
+    return true
   }
 }

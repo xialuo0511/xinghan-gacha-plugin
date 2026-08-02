@@ -91,7 +91,7 @@ export class GameSyncService {
       throw new ProtocolError("URL_IMPORT_REQUIRED", "Global roles require a trusted imported URL")
     }
 
-    const existing = await this.recordStore.load(role)
+    const existing = await this.recordStore.load(userId, role)
     const knownIds = new Set(existing.map(record => record.id))
     const pendingIds = new Set()
     const pending = []
@@ -170,7 +170,7 @@ export class GameSyncService {
       }
     }
 
-    const merged = await this.recordStore.merge(role, pending)
+    const merged = await this.recordStore.merge(userId, role, pending)
     return Object.freeze({
       game: this.game,
       uid: role.uid,
