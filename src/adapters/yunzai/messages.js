@@ -27,6 +27,8 @@ const PUBLIC_ERRORS = Object.freeze({
   IMPORT_CONTENT_REQUIRED: "请在命令后粘贴 UIGF JSON，或以机器人可读取的文件内容发送。",
   FILE_SEND_UNAVAILABLE: "当前机器人适配器无法发送文件，请联系管理员检查文件发送能力。",
   RENDER_UNAVAILABLE: "抽卡记录图片生成失败，请联系管理员检查 TRSS-Yunzai 的 Puppeteer 渲染器。",
+  RENDER_EXECUTION_FAILED: "抽卡记录截图执行失败，请管理员查看 xinghan-gacha-plugin/records 错误码。",
+  RENDER_MESSAGE_UNAVAILABLE: "截图已生成，但当前适配器无法构造图片消息。",
   UPDATE_IN_PROGRESS: "星瀚抽卡插件正在更新，请勿重复操作。",
   UPDATE_DIRTY: "插件目录存在本地改动或未跟踪文件，为避免覆盖数据已停止更新。",
   UPDATE_UNTRUSTED_REMOTE: "插件 Git 远端不是官方项目仓库，已拒绝更新。",

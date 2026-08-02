@@ -44,7 +44,26 @@ export async function renderRecordImage(renderer, view, options) {
   if (typeof renderer?.screenshot !== "function") {
     throw new ProtocolError("RENDER_UNAVAILABLE", "TRSS screenshot renderer is unavailable")
   }
-  const image = await renderer.screenshot("xinghan-gacha-records", recordRenderData(view, options))
+  let image
+  try {
+    // Yunzai Renderer.dealTpl() adds resPath to this object before rendering.
+    // Keep recordRenderData immutable for callers, but pass the renderer a mutable contract.
+    const renderData = { ...recordRenderData(view, options) }
+    image = await renderer.screenshot("xinghan-gacha-records", renderData)
+  } catch (error) {
+    const failure = new ProtocolError(
+      "RENDER_EXECUTION_FAILED",
+      "Record screenshot renderer threw an exception",
+    )
+    failure.causeName = String(error?.name ?? "Error")
+    throw failure
+  }
   if (!image) throw new ProtocolError("RENDER_UNAVAILABLE", "Record screenshot failed")
+  if (Buffer.isBuffer(image)) {
+    if (typeof globalThis.segment?.image !== "function") {
+      throw new ProtocolError("RENDER_MESSAGE_UNAVAILABLE", "Image message builder is unavailable")
+    }
+    return globalThis.segment.image(image)
+  }
   return image
 }
