@@ -24,7 +24,6 @@ function countClass(node, className) {
 }
 
 function fixture() {
-  const rank = { label: "5★", tone: "highest" }
   const status = { label: "UP", tone: "up", source: "record" }
   return {
     game: "genshin",
@@ -36,7 +35,6 @@ function fixture() {
     summary: {
       total: 1,
       highCount: 1,
-      middleCount: 0,
       averageHighPity: 20,
       upCount: 1,
       offCount: 0,
@@ -60,19 +58,8 @@ function fixture() {
         name: "</script><script>alert(1)</script>",
         poolName: "角色活动祈愿",
         pulls: 20,
+        pullLuck: { label: "欧皇", tone: "lucky" },
         time: "2026-08-02 11:00:00",
-        rank,
-        status,
-      },
-    ],
-    recent: [
-      {
-        name: "</script><script>alert(1)</script>",
-        itemType: "角色",
-        poolName: "角色活动祈愿",
-        pulls: 20,
-        time: "2026-08-02 11:00:00",
-        rank,
         status,
       },
     ],
@@ -95,10 +82,12 @@ test("shared record page script builds a complete DOM without HTML injection", a
   vm.runInNewContext(source, { document, JSON, Math, Number, String })
 
   assert.equal(body.dataset.rendered, "true")
-  assert.equal(container.children.length, 6)
+  assert.equal(container.children.length, 5)
   assert.equal(countClass(container, "pool-card"), 1)
   assert.equal(countClass(container, "highlight-card"), 1)
-  assert.equal(countClass(container, "record-row"), 2)
+  assert.equal(countClass(container, "record-row"), 0)
+  assert.equal(countClass(container, "pull-number"), 1)
+  assert.equal(countClass(container, "pull-lucky"), 1)
   const serialized = JSON.stringify(container)
   assert.equal(serialized.includes("alert(1)"), true)
   assert.equal(serialized.includes("innerHTML"), false)

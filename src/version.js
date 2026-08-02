@@ -1,1 +1,1 @@
-export const PLUGIN_REVISION = "2026-08-02-records-r4"
+export const PLUGIN_REVISION = "2026-08-02-records-r5"

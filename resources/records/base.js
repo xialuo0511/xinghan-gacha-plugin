@@ -70,8 +70,7 @@
     add(
       grid,
       metric("总记录", view.summary.total, "本地已保存"),
-      metric(view.game === "zzz" ? "S 级" : "五星", view.summary.highCount, "高稀有出货"),
-      metric(view.game === "zzz" ? "A 级" : "四星", view.summary.middleCount, "中稀有记录"),
+      metric(view.game === "zzz" ? "S 级出货" : "五星出货", view.summary.highCount, "仅统计金卡"),
       metric("平均出货", average === "--" ? average : `${average} 抽`, "仅按记录内区间"),
       metric("UP / 歪", upOff, view.summary.unknownUpCount ? `${view.summary.unknownUpCount} 条待确认` : "限定角色池"),
     )
@@ -109,58 +108,29 @@
 
   function renderHighlights(view) {
     const section = element("section", "record-section")
-    add(section, sectionTitle("高稀有出货", "最多展示最近 12 条"))
+    const title = view.game === "zzz" ? "S 级出货" : "金卡出货"
+    add(section, sectionTitle(title, `最近 ${view.highlights.length} / ${view.summary.highCount} 个`))
     const grid = element("div", "highlight-grid")
     if (view.highlights.length === 0) {
       grid.append(element("div", "empty-state", "尚无高稀有记录，下一发也许就是惊喜。"))
     }
     for (const item of view.highlights) {
-      const card = element("article", "highlight-card")
+      const card = element("article", `highlight-card pull-${item.pullLuck.tone}`)
       const top = element("div", "highlight-top")
-      add(top, element("span", `rank-badge rank-${item.rank.tone}`, item.rank.label), statusBadge(item.status))
+      add(top, element("span", "pull-label", item.pullLuck.label), statusBadge(item.status))
+      const score = element("div", "pull-score")
+      add(score, element("strong", "pull-number", item.pulls), element("span", "pull-unit", "抽"))
       add(
         card,
         top,
+        score,
         element("strong", "highlight-name", item.name),
         element("span", "highlight-pool", item.poolName),
-        element("span", "highlight-pulls", `${item.pulls} 抽出货（记录内）`),
         element("time", "highlight-time", item.time),
       )
       grid.append(card)
     }
     section.append(grid)
-    return section
-  }
-
-  function renderRecent(view) {
-    const section = element("section", "record-section")
-    add(section, sectionTitle("最近记录", `展示 ${view.recent.length} / ${view.summary.total} 条`))
-    const table = element("div", "record-table")
-    const head = element("div", "record-row record-head")
-    for (const label of ["稀有度", "名称", "卡池", "结果", "时间"]) {
-      head.append(element("span", "record-cell", label))
-    }
-    table.append(head)
-    for (const item of view.recent) {
-      const row = element("div", "record-row")
-      const rank = element("span", "record-cell")
-      rank.append(element("span", `rank-badge rank-${item.rank.tone}`, item.rank.label))
-      const name = element("span", "record-cell record-item")
-      add(name, element("strong", "record-name", item.name), element("small", "record-type", item.itemType))
-      const result = element("span", "record-cell")
-      const badge = statusBadge(item.status)
-      result.append(badge ?? element("span", "status-empty", item.pulls ? `${item.pulls} 抽` : "—"))
-      add(
-        row,
-        rank,
-        name,
-        element("span", "record-cell record-pool", item.poolName),
-        result,
-        element("time", "record-cell record-time", item.time),
-      )
-      table.append(row)
-    }
-    section.append(table)
     return section
   }
 
@@ -183,7 +153,6 @@
       renderMetrics(view),
       renderPools(view),
       renderHighlights(view),
-      renderRecent(view),
       renderFooter(view),
     )
     document.body.dataset.rendered = "true"
