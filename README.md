@@ -1,4 +1,4 @@
-# hoyo-gacha-plugin
+# xinghan-gacha-plugin
 
 面向 TRSS-Yunzai 的米哈游三游戏抽卡记录插件。目前完成开发规划的里程碑 0、1、2：
 
@@ -16,11 +16,11 @@
 
 ## 安装到 TRSS-Yunzai
 
-将仓库放在 TRSS-Yunzai 的 `plugins/hoyo-gacha-plugin`：
+将仓库放在 TRSS-Yunzai 的 `plugins/xinghan-gacha-plugin`：
 
 ```bash
-git clone <repository-url> plugins/hoyo-gacha-plugin
-cd plugins/hoyo-gacha-plugin
+git clone <repository-url> plugins/xinghan-gacha-plugin
+cd plugins/xinghan-gacha-plugin
 pnpm install
 pnpm check
 ```

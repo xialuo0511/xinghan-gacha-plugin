@@ -1,5 +1,5 @@
 export const YUNZAI_MANIFEST = Object.freeze({
-  id: "hoyo-gacha-plugin",
+  id: "xinghan-gacha-plugin",
   name: "米游社三游戏抽卡记录",
   platforms: Object.freeze(["TRSS-Yunzai"]),
   milestone: 2,

@@ -30,7 +30,7 @@ export class CredentialStore {
   }
 
   aad(userId) {
-    return `hoyo-gacha-plugin:credential:v1:${String(userId)}`
+    return `xinghan-gacha-plugin:credential:v1:${String(userId)}`
   }
 
   async save(userId, credential) {

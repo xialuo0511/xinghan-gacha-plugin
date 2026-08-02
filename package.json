@@ -1,5 +1,5 @@
 {
-  "name": "hoyo-gacha-plugin",
+  "name": "xinghan-gacha-plugin",
   "version": "0.1.0",
   "description": "TRSS-Yunzai plugin foundation for secure HoYoverse gacha record imports.",
   "type": "module",
