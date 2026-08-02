@@ -68,8 +68,12 @@ test("TRSS-style root loader imports every app class", async context => {
   const records = new loaded.apps.records()
   for (const command of [
     "#抽卡记录-查看原神抽卡记录",
+    "#查看原神抽卡记录",
     "*抽卡记录-查看HSR的",
+    "#查看星铁抽卡记录",
     "%抽卡记录-查看ZZZ的",
+    "％抽卡记录-查看绝区零的抽卡记录",
+    "#查看绝区零抽卡记录",
   ]) {
     assert.equal(records.rule.some(rule => new RegExp(rule.reg).test(command)), true)
   }

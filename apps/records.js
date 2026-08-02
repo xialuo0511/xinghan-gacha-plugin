@@ -15,13 +15,25 @@ export class records extends plugin {
   constructor() {
     super({
       name: "三游戏抽卡记录图",
-      dsc: "使用差异化命令查看原神、星铁和绝区零抽卡记录",
+      dsc: "查看原神、星铁和绝区零抽卡记录图片",
       event: "message",
       priority: 5000,
       rule: [
-        { reg: "^#抽卡记录-查看原神抽卡记录$", fnc: "viewGenshin", log: false },
-        { reg: "^\\*抽卡记录-查看(?:HSR|hsr|星铁)(?:的)?$", fnc: "viewStarRail", log: false },
-        { reg: "^%抽卡记录-查看(?:ZZZ|zzz|绝区零)(?:的)?$", fnc: "viewZzz", log: false },
+        {
+          reg: "^#(?:抽卡记录-查看原神抽卡记录|查看原神抽卡记录)$",
+          fnc: "viewGenshin",
+          log: false,
+        },
+        {
+          reg: "^(?:\\*抽卡记录-查看(?:HSR|hsr|星铁)(?:的)?(?:抽卡记录)?|#(?:抽卡记录-查看星铁抽卡记录|查看星铁抽卡记录))$",
+          fnc: "viewStarRail",
+          log: false,
+        },
+        {
+          reg: "^(?:[%％]抽卡记录-查看(?:ZZZ|zzz|绝区零)(?:的)?(?:抽卡记录)?|#(?:抽卡记录-查看绝区零抽卡记录|查看绝区零抽卡记录))$",
+          fnc: "viewZzz",
+          log: false,
+        },
       ],
     })
   }
