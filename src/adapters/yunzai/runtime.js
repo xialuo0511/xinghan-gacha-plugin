@@ -19,7 +19,7 @@ export function getYunzaiRuntime() {
   if (!globalThis.redis) throw new Error("TRSS Redis is unavailable")
 
   const credentialStore = new CredentialStore({
-    directory: path.join(process.cwd(), "plugins", "hoyo-gacha-plugin", "data", "credentials"),
+    directory: path.join(process.cwd(), "plugins", "xinghan-gacha-plugin", "data", "credentials"),
   })
   const qrLoginService = new QrLoginService({
     client: new QrLoginClient(),
@@ -30,7 +30,7 @@ export function getYunzaiRuntime() {
   })
   const authKeyCache = new MemoryAuthKeyCache()
   const recordStore = new RecordStore({
-    directory: path.join(process.cwd(), "plugins", "hoyo-gacha-plugin", "data", "records"),
+    directory: path.join(process.cwd(), "plugins", "xinghan-gacha-plugin", "data", "records"),
   })
   const genshinSyncService = new GenshinSyncService({
     credentialStore,

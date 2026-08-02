@@ -9,7 +9,7 @@ test("TRSS-style root loader imports every app class", async context => {
   const project = path.resolve(fileURLToPath(new URL("../..", import.meta.url)))
   const root = await mkdtemp(path.join(os.tmpdir(), "hoyo-trss-loader-"))
   context.after(() => rm(root, { recursive: true, force: true }))
-  const pluginRoot = path.join(root, "plugins", "hoyo-gacha-plugin")
+  const pluginRoot = path.join(root, "plugins", "xinghan-gacha-plugin")
   await mkdir(pluginRoot, { recursive: true })
   for (const entry of ["apps", "src", "index.js", "package.json"]) {
     await cp(path.join(project, entry), path.join(pluginRoot, entry), { recursive: true })
