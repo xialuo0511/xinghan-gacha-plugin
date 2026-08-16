@@ -22,6 +22,7 @@ function serviceFixture(states) {
         accountId: "10001",
         mid: "20002",
         stoken: "fixture-stoken",
+        stokenName: "stoken_v2",
         device,
       }),
     },
@@ -60,6 +61,8 @@ test("runs Created to Scanned to Confirmed and clears the mutex", async () => {
 
   assert.equal(result.state, "Confirmed")
   assert.deepEqual(statuses, ["Scanned", "Confirmed"])
+  assert.equal(saved.get("user-a").cookieToken, "fixture-cookie-token")
+  assert.equal(saved.get("user-a").stokenName, "stoken_v2")
   assert.equal(saved.get("user-a").selectedRoles.genshin, "123456789")
   assert.equal(await sessionStore.get("user-a"), undefined)
 })

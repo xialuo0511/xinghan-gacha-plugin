@@ -64,6 +64,7 @@ test("extracts only the minimum confirmed credential fields", () => {
     accountId: "10001",
     mid: "20002",
     stoken: "fixture-stoken",
+    stokenName: "stoken_v2",
     device,
   })
   assert.equal("email" in credential, false)

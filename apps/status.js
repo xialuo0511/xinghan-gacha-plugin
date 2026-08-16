@@ -17,7 +17,7 @@ export class status extends plugin {
         {
           reg: "^#?星瀚抽卡诊断$",
           fnc: "diagnose",
-          log: true,
+          log: false,
         },
       ],
     })
@@ -36,10 +36,14 @@ export class status extends plugin {
 
   async diagnose() {
     const event = this.e ?? {}
+    const miaoBridgeAvailable = Boolean(
+      event.runtime?.MysUser?.create && event.runtime?.NoteUser?.create,
+    )
     return this.reply(
       [
         `xinghan-gacha-plugin 诊断：${PLUGIN_REVISION}`,
         `主密钥：${process.env.HOYO_GACHA_MASTER_KEY ? "当前进程已读取" : "当前进程未读取"}`,
+        `Yunzai/miao 账号桥接：${miaoBridgeAvailable ? "可用" : "不可用（请检查 genshin 插件）"}`,
         `适配器：${String(event.adapter_name ?? event.adapter_id ?? "unknown")}`,
         `消息类型：${String(event.message_type ?? "unknown")}；私聊：${Boolean(event.isPrivate)}`,
         "绝区零推荐命令：#查看绝区零抽卡记录",

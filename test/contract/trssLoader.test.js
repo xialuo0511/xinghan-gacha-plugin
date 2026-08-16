@@ -38,7 +38,7 @@ test("TRSS-style root loader imports every app class", async context => {
   }
   context.after(() => delete globalThis.logger)
   const loaded = await import(`${pathToFileURL(path.join(pluginRoot, "index.js")).href}?smoke=1`)
-  assert.equal(startupLogs.some(message => /2026-08-16-records-r8/.test(message)), true)
+  assert.equal(startupLogs.some(message => /2026-08-16-records-r9/.test(message)), true)
   assert.equal(startupLogs.some(message => /records/.test(message)), true)
   assert.deepEqual(Object.keys(loaded.apps), [
     "account",
@@ -73,6 +73,72 @@ test("TRSS-style root loader imports every app class", async context => {
 
   const help = new loaded.apps.help()
   assert.equal(help.rule.some(rule => new RegExp(rule.reg).test("#星瀚抽卡帮助")), true)
+
+  const account = new loaded.apps.account()
+  assert.equal(account.rule.some(rule => new RegExp(rule.reg).test("#同步米游社Cookie")), true)
+
+  const loginRepliesA = []
+  const loginRepliesB = []
+  let resolveLoginPoll
+  let markLoginPollStarted
+  let synchronizedEvent
+  const loginPollStarted = new Promise(resolve => {
+    markLoginPollStarted = resolve
+  })
+  const loginApp = new loaded.apps.login()
+  const loginEventA = {
+    isPrivate: true,
+    user_id: "login-user-a",
+    reply: async message => loginRepliesA.push(message),
+  }
+  const loginEventB = {
+    isPrivate: true,
+    user_id: "login-user-b",
+    reply: async message => loginRepliesB.push(message),
+  }
+  loginApp.e = loginEventA
+  loginApp.getLoginRuntime = () => ({
+    qrLoginService: {
+      start: async () => ({ url: "https://user.mihoyo.com/qr" }),
+      poll: async () => {
+        markLoginPollStarted()
+        return new Promise(resolve => {
+          resolveLoginPoll = resolve
+        })
+      },
+    },
+    credentialStore: {
+      load: async userId => ({
+        accountId: "10001",
+        mid: "20002",
+        stoken: `fixture-stoken-for-${userId}`,
+        cookieToken: "fixture-cookie-token",
+        roles: [{ game: "genshin", uid: "123456789" }],
+      }),
+    },
+  })
+  loginApp.syncMiaoCredential = async event => {
+    synchronizedEvent = event
+    return { status: "synced", cacheReady: true }
+  }
+  const previousSegment = globalThis.segment
+  globalThis.segment = { image: value => ({ type: "image", value }) }
+  try {
+    const pendingLogin = loginApp.login()
+    await loginPollStarted
+    loginApp.e = loginEventB
+    resolveLoginPoll({
+      state: "Confirmed",
+      persistence: "encrypted-file",
+      roles: [{ game: "genshin", uid: "123456789", regionName: "天空岛" }],
+    })
+    await pendingLogin
+  } finally {
+    globalThis.segment = previousSegment
+  }
+  assert.equal(synchronizedEvent, loginEventA)
+  assert.equal(loginRepliesA.some(message => /Cookie 已同步/.test(String(message))), true)
+  assert.deepEqual(loginRepliesB, [])
 
   const records = new loaded.apps.records()
   assert.equal(records.priority, 1000)
@@ -309,8 +375,9 @@ test("TRSS-style root loader imports every app class", async context => {
   status.e = { isPrivate: true, adapter_name: "MCQQ", message_type: "private" }
   status.reply = async message => statusReplies.push(message)
   await status.diagnose()
-  assert.match(statusReplies[0], /2026-08-16-records-r8/)
+  assert.match(statusReplies[0], /2026-08-16-records-r9/)
   assert.match(statusReplies[0], /主密钥：当前进程(?:已|未)读取/)
+  assert.match(statusReplies[0], /Yunzai\/miao 账号桥接：不可用/)
 
   const update = new loaded.apps.update()
   for (const command of ["#星瀚抽卡更新", "#星瀚抽卡更新日志"]) {

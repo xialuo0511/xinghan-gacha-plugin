@@ -117,9 +117,9 @@ export class QrLoginClient {
     const tokens = Array.isArray(data?.tokens) ? data.tokens : []
     const selected =
       tokens.find(item => item?.name === "stoken_v2") ??
-      tokens.find(item => item?.name === "stoken") ??
-      tokens[0]
+      tokens.find(item => item?.name === "stoken")
     const stoken = stringField(selected?.token, "stoken")
-    return Object.freeze({ accountId, mid, stoken, device })
+    const stokenName = selected?.name === "stoken_v2" ? "stoken_v2" : "stoken"
+    return Object.freeze({ accountId, mid, stoken, stokenName, device })
   }
 }
