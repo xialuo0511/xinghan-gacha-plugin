@@ -12,6 +12,7 @@ export const YUNZAI_MANIFEST = Object.freeze({
     "#扫码登录",
     "#取消扫码登录",
     "#我的游戏角色",
+    "#同步米游社Cookie",
     "#选择原神 <UID>",
     "#选择星铁 <UID>",
     "#选择绝区零 <UID>",

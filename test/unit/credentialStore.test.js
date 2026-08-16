@@ -10,6 +10,8 @@ const fixture = {
   accountId: "10001",
   mid: "20002",
   stoken: "fixture-stoken-secret",
+  stokenName: "stoken_v2",
+  cookieToken: "fixture-cookie-token-secret",
   device: { id: "A".repeat(32), name: "Android-test", model: "MTEST" },
   roles: [],
   selectedRoles: {},
@@ -25,6 +27,7 @@ test("persists credentials only as AES-256-GCM ciphertext", async context => {
   assert.equal(result.persistence, "encrypted-file")
   const source = await readFile(store.file("user-a"), "utf8")
   assert.equal(source.includes(fixture.stoken), false)
+  assert.equal(source.includes(fixture.cookieToken), false)
   assert.equal(JSON.parse(source).algorithm, "aes-256-gcm")
 
   const reloaded = new CredentialStore({ directory, masterKey: key })
@@ -47,4 +50,40 @@ test("wrong keys fail without exposing plaintext", async context => {
     () => wrong.load("user-c"),
     error => error.message === "Credential decryption failed" && !error.message.includes(fixture.stoken),
   )
+})
+
+test("failed encrypted writes never become readable from the memory cache", async () => {
+  for (const failingOperation of ["writeFile", "rename"]) {
+    let readCalls = 0
+    let cleanupCalls = 0
+    const failure = Object.assign(new Error(`fixture ${failingOperation} failure`), {
+      code: "ENOSPC",
+    })
+    const fileSystem = {
+      async mkdir() {},
+      async writeFile() {
+        if (failingOperation === "writeFile") throw failure
+      },
+      async rename() {
+        if (failingOperation === "rename") throw failure
+      },
+      async rm() {
+        cleanupCalls++
+      },
+      async readFile() {
+        readCalls++
+        throw Object.assign(new Error("missing fixture file"), { code: "ENOENT" })
+      },
+    }
+    const store = new CredentialStore({
+      directory: path.join(os.tmpdir(), `hoyo-credential-failed-${failingOperation}`),
+      masterKey: Buffer.alloc(32, 9),
+      fileSystem,
+    })
+
+    await assert.rejects(() => store.save("user-d", fixture), failure)
+    assert.equal(await store.load("user-d"), undefined)
+    assert.equal(readCalls, 1)
+    assert.equal(cleanupCalls, 1)
+  }
 })

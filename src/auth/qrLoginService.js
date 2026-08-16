@@ -85,6 +85,7 @@ export class QrLoginService {
           const discovery = await this.roleDiscovery.discover(credential, cookieToken, { signal })
           const storedCredential = {
             ...credential,
+            cookieToken,
             roles: discovery.roles,
             selectedRoles: defaultSelection(discovery.roles),
           }

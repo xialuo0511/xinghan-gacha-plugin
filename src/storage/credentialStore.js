@@ -35,8 +35,10 @@ export class CredentialStore {
 
   async save(userId, credential) {
     const key = String(userId)
-    this.memory.set(key, clone(credential))
-    if (!this.persistent) return Object.freeze({ persistence: "memory" })
+    if (!this.persistent) {
+      this.memory.set(key, clone(credential))
+      return Object.freeze({ persistence: "memory" })
+    }
 
     await this.fs.mkdir(this.directory, { recursive: true, mode: 0o700 })
     const envelope = {
@@ -45,11 +47,19 @@ export class CredentialStore {
     }
     const target = this.file(userId)
     const temporary = `${target}.${randomBytes(6).toString("hex")}.tmp`
-    await this.fs.writeFile(temporary, `${JSON.stringify(envelope)}\n`, {
-      encoding: "utf8",
-      mode: 0o600,
-    })
-    await this.fs.rename(temporary, target)
+    try {
+      await this.fs.writeFile(temporary, `${JSON.stringify(envelope)}\n`, {
+        encoding: "utf8",
+        mode: 0o600,
+      })
+      await this.fs.rename(temporary, target)
+    } catch (error) {
+      await this.fs.rm(temporary, { force: true }).catch(() => {})
+      throw error
+    }
+    // A persistent store must never expose a new credential from memory until
+    // its encrypted file has been committed successfully.
+    this.memory.set(key, clone(credential))
     return Object.freeze({ persistence: "encrypted-file" })
   }
 

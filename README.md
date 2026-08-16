@@ -7,6 +7,7 @@
 - 严格白名单抽卡 URL 解析与可信端点重建；
 - URL、Cookie、token、ticket 等敏感信息脱敏；
 - 国服米游社 App 二维码登录、Redis 会话互斥及三游戏角色发现；
+- 扫码后通过 TRSS 原生 `MysUser` / `NoteUser` 模型同步 Yunzai/miao Cookie 与 UID 绑定；
 - AES-256-GCM 凭据存储；未提供主密钥时仅保存在当前进程内存；
 - 原神 `100/200/301/302/500` 五池 authkey 拉取、分页、退避和增量存储；
 - 星铁通过游戏内抽卡 URL 同步 `1/2/11/12/21/22` 六池，联动池使用独立路由；
@@ -105,6 +106,7 @@ test -n "$HOYO_GACHA_MASTER_KEY" && echo "已设置，长度：${#HOYO_GACHA_MAS
 #扫码登录
 #取消扫码登录
 #我的游戏角色
+#同步米游社Cookie
 #选择原神 123456789
 #选择星铁 100000001
 #选择绝区零 10000002
@@ -137,6 +139,14 @@ test -n "$HOYO_GACHA_MASTER_KEY" && echo "已设置，长度：${#HOYO_GACHA_MAS
 
 发送 `#星瀚抽卡帮助` 可查看全部命令和首次使用指引。账号、角色、导入、导出、同步及记录图命令均限制为私聊。URL 导入时，如果已经选中对应游戏角色，可省略 UID。完整授权 URL 只在当前调用内存中使用，不写入记录文件或 authkey 缓存。同步开始时会立即回复，并在每个卡池完成后报告进度；分页基础间隔为 300 ms 并带小幅随机抖动。`#更新全部抽卡记录` 会串行处理三款游戏并在游戏间加入额外抖动，降低触发频控的概率。
 
+### 与 Yunzai / miao 的 Cookie 同步
+
+当前 miao-plugin 本身不维护 Cookie 文件目录，它通过 Yunzai 的 genshin 模块读取共享用户库。扫码确认后，本插件会在自身加密保存 `stoken` 与换取到的 `cookie_token`，再通过 TRSS 提供的 `MysUser` / `NoteUser` 模型写入 Yunzai 用户库并建立当前聊天用户关联。默认 SQLite 位置是 TRSS-Yunzai 根目录下的 `data/db/data.db`（例如 `/www/Bot/Yunzai/data/db/data.db`）；如果管理员在 `config/config/db.yaml` 改用了其他 SQLite 路径、MySQL 或 PostgreSQL，桥接会自动沿用该配置。不要手工写 `plugins/miao-plugin` 或旧版 `data/MysCookie` 目录。
+
+自动同步仅在 `HOYO_GACHA_MASTER_KEY` 已生效、星瀚凭据成功加密落盘后执行。若同步时 genshin/miao 尚未安装、缓存刷新失败或上游暂时不可用，安装修复后可私聊发送 `#同步米游社Cookie` 重试，无需再次获取抽卡记录。同步成功后可直接使用 `#米游社更新面板`；同一米游社账号有多个角色时，重新选择 UID 后执行同步会跟随新选择；如果当前主 UID 原本只是手动绑定且不属于任何 Cookie，插件也会切换到本次扫码发现的角色；已有其他有效 Cookie 主 UID 时不会擅自覆盖。
+
+Yunzai 上游的 `MysUsers.ck` 字段会按其既有规则保存明文 Cookie，**不受** `HOYO_GACHA_MASTER_KEY` 保护。请限制 `data/db/data.db` 或外部数据库的文件/账号权限，不要备份到公开位置。`#删除米游社授权 确认` 只删除星瀚插件中的加密授权，不会破坏可能被其他用户共享的 Yunzai/miao 绑定；如需删除后者，请另行私聊使用上游 `#删除ck`。
+
 星铁的游戏内跃迁 authkey 与米游社 `genAuthKey` 返回的 Auth Key B 并不等价，后者会被跃迁接口判定为 `authkey error`。因此 `#更新星铁抽卡记录` 和“更新全部”中的星铁步骤会直接给出导入提示，不再重复生成无效凭据；请在私聊中使用 `#导入星铁抽卡URL [UID] URL`。这是星铁当前可靠的同步入口，不影响已导入记录的保存和图片查看。
 
 记录查看推荐使用 `#查看原神抽卡记录`、`#查看星铁抽卡记录`、`#查看绝区零抽卡记录`，以避免部分 TRSS 消息适配器吞掉 `*` 或 `%` 前缀。短命令分别为 `#抽卡记录`（原神）、`*抽卡记录`（星铁）和 `%抽卡记录`（绝区零），全角 `％抽卡记录`、`%绝区零抽卡记录` 和 `％绝区零抽卡记录` 也可识别；原来的长命令继续兼容。
@@ -145,7 +155,7 @@ test -n "$HOYO_GACHA_MASTER_KEY" && echo "已设置，长度：${#HOYO_GACHA_MAS
 
 如果 TRSS-Yunzai 的 `plugins/miao-plugin` 已安装，插件会在生成原神或星铁记录图时只读其本地 `resources/meta-gs` / `resources/meta-sr` 素材；安装了 `plugins/ZZZ-Plugin` 时，也会只读其 `resources/map` 与 `resources/images` 缓存，为绝区零代理人、音擎和邦布配图。两类素材都优先按抽卡记录中的物品 ID 匹配，名称仅作安全回退。常规并列安装无需配置；非标准目录可在启动 TRSS-Yunzai 前分别设置 `MIAO_PLUGIN_ROOT` 或 `ZZZ_PLUGIN_ROOT`。素材只嵌入当次截图，不复制进本仓库、不发起远程图片请求，也不会导入其他插件的代码模块；素材解析超过 5 秒或内容缺失时，本次截图会使用插件内置中性图像，后续命令会自动重试。本地游戏素材来自对应插件的上游资源，请遵守相关项目与素材权利人的使用要求。
 
-启动或热重载成功后，日志会出现 `[xinghan-gacha-plugin] 已加载 2026-08-16-records-r8` 和应用列表。记录命令命中后会出现 `[xinghan-gacha-plugin/records] 命令已命中`；日志只包含游戏、适配器、私聊状态、错误码和异常类型，不记录用户 ID、消息内容或任何凭据。记录图队列最多保留 24 个等待任务，视图读取、单页截图和消息发送均有超时保护；适配器明确返回失败时不会把该页计为已发送。为避免异常导入长期占用机器人，单个角色最多处理 50,000 条总记录和 4,096 条高稀有记录，超过时会明确报错并停止生成，不会静默截断。发送 `#星瀚抽卡诊断` 可确认当前进程是否已经读取 `HOYO_GACHA_MASTER_KEY`，不会显示密钥内容。
+启动或热重载成功后，日志会出现 `[xinghan-gacha-plugin] 已加载 2026-08-16-records-r9` 和应用列表。记录命令命中后会出现 `[xinghan-gacha-plugin/records] 命令已命中`；日志只包含游戏、适配器、私聊状态、错误码和异常类型，不记录用户 ID、消息内容或任何凭据。记录图队列最多保留 24 个等待任务，视图读取、单页截图和消息发送均有超时保护；适配器明确返回失败时不会把该页计为已发送。为避免异常导入长期占用机器人，单个角色最多处理 50,000 条总记录和 4,096 条高稀有记录，超过时会明确报错并停止生成，不会静默截断。发送 `#星瀚抽卡诊断` 可确认当前进程是否已经读取 `HOYO_GACHA_MASTER_KEY`，以及 Yunzai/miao 账号桥接是否可用；不会显示密钥内容。
 
 `#星瀚抽卡更新` 和 `#星瀚抽卡更新日志` 仅允许机器人主人使用。更新命令只接受 `https://github.com/xialuo0511/xinghan-gacha-plugin.git`，要求插件工作区没有本地改动，并使用 `git pull --ff-only` 拉取当前分支；它不会强制覆盖、暂存或删除本地文件，也不会自动执行依赖安装或重启。更新成功后会显示新提交日志；若依赖清单变化，将提示管理员执行 `pnpm install`，随后重启 TRSS-Yunzai。
 
@@ -172,7 +182,8 @@ pnpm smoke:live -- --help
 - URL 仅用于解析参数，后续请求 URL 必须从本地可信端点表重建。
 - 完整授权 URL、Cookie、stoken、authkey 和 ticket 不得进入日志或异常文本。
 - 扫码登录强制私聊；同一用户同时只能存在一个 Redis 二维码会话，超时、取消和错误都会清理。
-- 凭据保存到 `data/credentials`，且只允许 AES-256-GCM 密文；抽卡记录按机器人用户隔离保存到 `data/records`，不含凭据或完整授权 URL。
+- 星瀚凭据保存到 `data/credentials`，且只允许 AES-256-GCM 密文；启用 miao 同步后，Yunzai 共享数据库还会按上游规范保存一份明文 Cookie。
+- 抽卡记录按机器人用户隔离保存到 `data/records`，不含凭据或完整授权 URL。
 - `src/` 核心模块不得依赖 `Bot`、`redis`、`logger`、`segment` 等 Yunzai 全局对象；平台耦合只放在 `apps/` 与 `src/adapters/yunzai/`。
 
 ## 目录
