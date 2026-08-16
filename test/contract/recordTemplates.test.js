@@ -21,3 +21,10 @@ test("shared record page code inserts remote names as text, not HTML", async () 
   assert.equal(source.includes("innerHTML"), false)
   assert.equal(/https?:\/\//i.test(source), false)
 })
+
+test("bundles a compact real WebP fallback for missing local portraits", async () => {
+  const image = await readFile(new URL("assets/item-fallback.webp", root))
+  assert.equal(image.subarray(0, 4).toString("ascii"), "RIFF")
+  assert.equal(image.subarray(8, 12).toString("ascii"), "WEBP")
+  assert.equal(image.length < 100 * 1024, true)
+})

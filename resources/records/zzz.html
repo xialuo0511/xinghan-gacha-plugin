@@ -7,83 +7,51 @@
     <link rel="stylesheet" href="{{cssUrl}}">
     <style>
       :root {
-        --page-bg: #12130f;
-        --surface: linear-gradient(120deg, rgba(230, 255, 40, 0.06), transparent 24%), #191a16;
-        --text: #e8eadf;
-        --heading: #fcffef;
-        --muted: #9ea38f;
-        --header-text: #11130d;
-        --muted-on-header: #444a2f;
-        --header-bg: linear-gradient(112deg, #dfff32, #f4ff75 58%, #ff6b38 58.5%, #ff8a52);
-        --header-border: #f3ff79;
-        --emblem-bg: #11130d;
-        --emblem-radius: 6px;
-        --chip-bg: rgba(17, 19, 13, 0.11);
-        --chip-border: rgba(17, 19, 13, 0.28);
-        --luck-bg: rgba(17, 19, 13, 0.9);
-        --card-bg: #24261f;
+        --page-bg: #10110e;
+        --surface: #171814;
+        --text: #e9ebdf;
+        --heading: #fbffea;
+        --muted: #9da38d;
+        --header-text: #171914;
+        --muted-on-header: #3e4529;
+        --header-bg: #dffc3b;
+        --header-border: #f0ff83;
+        --header-card-bg: #c6df35;
+        --header-card-border: #aabe31;
+        --chip-bg: #c6df35;
+        --chip-border: #9db32a;
+        --luck-bg: #1e2119;
+        --metric-strong: #171914;
         --section-bg: #1d1f1a;
-        --highlight-bg: linear-gradient(145deg, #2b2e23, #20221c);
-        --highlight-border: #687229;
-        --line: #3b3f31;
-        --line-soft: #303329;
-        --track: #35382d;
-        --accent: #dfff32;
-        --accent-strong: #e6ff42;
-        --pity-gradient: linear-gradient(90deg, #dfff32, #ffb52f, #ff5947);
-        --row-alt: #20221c;
-        --table-head-bg: #dfff32;
-        --table-head-text: #14150f;
-        --footer-bg: #dfff32;
-        --footer-text: #171910;
-        --display-font: "Arial Black", "Microsoft YaHei", sans-serif;
+        --card-bg: #25271f;
+        --soft-bg: #2c2f25;
+        --result-bg: #2a2d23;
+        --media-bg: #191b17;
+        --line: #424637;
+        --line-soft: #35382d;
+        --track: #3a3e30;
+        --high-border: #d2a744;
+        --accent: #dffc3b;
+        --accent-strong: #dffc3b;
+        --footer-bg: #dffc3b;
+        --footer-text: #171914;
         --radius-large: 8px;
-        --radius-medium: 6px;
-        --radius-small: 4px;
-        --shadow: 10px 10px 0 rgba(0, 0, 0, 0.35);
-        --card-shadow: 5px 5px 0 rgba(0, 0, 0, 0.22);
+        --radius-medium: 7px;
+        --radius-small: 5px;
+        --shadow: 9px 9px 0 rgba(0, 0, 0, 0.3);
+        --card-shadow: 5px 5px 0 rgba(0, 0, 0, 0.2);
+        --pool-shadow: 4px 4px 0 rgba(0, 0, 0, 0.18);
       }
 
-      #container::before {
-        top: -100px;
-        right: -150px;
-        width: 620px;
-        height: 250px;
-        background: repeating-linear-gradient(-45deg, rgba(223, 255, 50, 0.13) 0 16px, transparent 16px 34px);
-        transform: rotate(9deg);
-      }
-
-      #container::after {
-        bottom: 200px;
-        left: -90px;
-        width: 340px;
-        height: 90px;
-        background: #ff5d3d;
-        opacity: 0.08;
-        transform: rotate(-18deg);
-      }
-
-      .theme-emblem {
-        color: #dfff32;
-        transform: rotate(-4deg);
+      .luck-kicker,
+      .luck-message {
+        color: #e9ebdf;
       }
 
       .record-title,
-      .section-title {
+      .section-heading-copy,
+      .pool-name {
         text-transform: uppercase;
-      }
-
-      .record-header,
-      .metric-card,
-      .record-section,
-      .pool-card,
-      .highlight-card {
-        transform: skewX(-0.5deg);
-      }
-
-      .luck-message,
-      .luck-kicker {
-        color: #e8eadf;
       }
     </style>
   </head>
