@@ -60,6 +60,9 @@
       element("span", "identity-chip", `UID ${view.uid}`),
       element("span", "identity-chip", view.region),
       element("span", "identity-chip", `更新 ${shortDate(view.latestRecordAt)}`),
+      view.pagination?.total > 1
+        ? element("span", "identity-chip", `第 ${view.pagination.page} / ${view.pagination.total} 页`)
+        : undefined,
     )
     copy.append(identity)
 
@@ -77,11 +80,15 @@
     )
 
     const luck = element("aside", `luck-card luck-${view.luck.tone}`)
+    const highLabel = view.game === "zzz" ? "S 级" : "五星"
+    const luckMessage = view.summary.averageHighPity === undefined
+      ? `暂无${highLabel}样本`
+      : `${view.summary.highCount} 个${view.game === "zzz" ? " S 级" : "五星"}结果，平均 ${view.summary.averageHighPity} 抽`
     add(
       luck,
-      element("span", "luck-kicker", "欧非雷达"),
+      element("span", "luck-kicker", "总体评价"),
       element("strong", "luck-label", view.luck.label),
-      element("p", "luck-message", view.luck.message),
+      element("p", "luck-message", luckMessage),
     )
     add(header, copy, metrics, luck)
     return header
@@ -165,6 +172,13 @@
       headingCopy,
       element("h2", "pool-name", pool.name),
       element("span", "pool-range", rangeText(pool.dateRange)),
+      view.pagination?.total > 1
+        ? element(
+          "span",
+          "pool-page-count",
+          `本页 ${pool.items.length} / 全池 ${pool.highCount} 个${view.game === "zzz" ? " S 级" : "五星"}结果`,
+        )
+        : undefined,
     )
     const total = element("div", "pool-total")
     add(total, element("strong", "pool-total-value", pool.total), element("span", "pool-total-label", "抽"))
@@ -223,7 +237,7 @@
     } else {
       upOff = pool.upCount || pool.offCount
         ? element("span", "pool-upoff", `UP ${pool.upCount} · 歪 ${pool.offCount}`)
-        : element("span", "pool-upoff", `已展示 ${pool.displayedHighCount} / ${pool.highCount}`)
+        : element("span", "pool-upoff", `共 ${pool.highCount} 个${view.game === "zzz" ? " S 级" : "五星"}结果`)
     }
     add(pity, pityCopy, upOff)
     const track = element("div", "pity-track")
@@ -233,9 +247,8 @@
 
     const results = element("div", "pool-results")
     if (pool.items.length === 0) {
-      const message = pool.highCount
-        ? "更早的高稀有记录已折叠，顶部统计仍包含完整本地数据。"
-        : `尚无高稀有出货，当前已垫 ${pool.currentPity} / ${pool.pityCap} 抽。`
+      const rarity = view.game === "zzz" ? "S 级" : "五星"
+      const message = `暂无${rarity}结果；当前垫抽 ${pool.currentPity ?? 0} / ${pool.pityCap}。`
       results.append(element("div", "pool-empty", message))
     } else {
       for (const item of pool.items) results.append(renderResult(view, item))
@@ -244,26 +257,31 @@
     add(panel, heading, stats, pity)
     if (pool.pityMode !== "consumed") panel.append(track)
     panel.append(results)
-    if (pool.hiddenHighCount) {
-      panel.append(element("p", "pool-hidden-note", `另有 ${pool.hiddenHighCount} 个较早高稀有结果未展开`))
-    }
     return panel
   }
 
   function renderPoolBoard(view) {
     const section = element("section", "record-section")
     const heading = element("div", "section-heading")
+    const rarity = view.game === "zzz" ? " S 级" : "五星"
+    const sectionNote = view.pagination?.total > 1
+      ? `第 ${view.pagination.page} / ${view.pagination.total} 页 · 共 ${view.pagination.totalItems} 个${rarity}结果`
+      : `展示全部${rarity}结果`
     add(
       heading,
-      element("div", "section-heading-copy", "分池战报"),
-      element("span", "section-note", `一张图看清每个${view.game === "zzz" ? "频段" : "卡池"}的出货节奏`),
+      element("div", "section-heading-copy", view.game === "zzz" ? "频段明细" : "卡池明细"),
+      element("span", "section-note", sectionNote),
     )
     section.append(heading)
 
     const active = view.pools.filter(pool => pool.total > 0)
     const empty = view.pools.filter(pool => pool.total === 0)
     const board = element("div", "pool-board")
-    for (const pool of active) board.append(renderPool(view, pool))
+    const columns = [element("div", "pool-column"), element("div", "pool-column")]
+    for (const [index, pool] of active.entries()) {
+      columns[index % columns.length].append(renderPool(view, pool))
+    }
+    if (active.length > 0) board.append(...columns)
     if (active.length === 0) board.append(element("div", "empty-state", "当前角色没有可展示的抽卡记录。"))
     section.append(board)
 

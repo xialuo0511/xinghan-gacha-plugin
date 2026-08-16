@@ -29,6 +29,11 @@ const PUBLIC_ERRORS = Object.freeze({
   RENDER_UNAVAILABLE: "抽卡记录图片生成失败，请联系管理员检查 TRSS-Yunzai 的 Puppeteer 渲染器。",
   RENDER_EXECUTION_FAILED: "抽卡记录截图执行失败，请管理员查看 xinghan-gacha-plugin/records 错误码。",
   RENDER_MESSAGE_UNAVAILABLE: "截图已生成，但当前适配器无法构造图片消息。",
+  RENDER_QUEUE_FULL: "当前抽卡记录图生成队列已满，请稍后重试。",
+  RECORD_VIEW_TIMEOUT: "读取抽卡记录超时，请稍后重试；本次任务不会继续生成旧截图。",
+  RECORD_VIEW_TOO_LARGE:
+    "抽卡历史超过安全展示上限（总记录 50000 条或高稀有 4096 条），已停止生成且不会静默截断；请联系管理员检查数据。",
+  RECORD_VIEW_CHANGED: "抽卡记录在分批发送期间发生变化，请重新发送查看命令。",
   UPDATE_IN_PROGRESS: "星瀚抽卡插件正在更新，请勿重复操作。",
   UPDATE_DIRTY: "插件目录存在本地改动或未跟踪文件，为避免覆盖数据已停止更新。",
   UPDATE_UNTRUSTED_REMOTE: "插件 Git 远端不是官方项目仓库，已拒绝更新。",

@@ -7,6 +7,13 @@ const RARITY = Object.freeze({
   zzz: Object.freeze({ high: "4" }),
 })
 
+// 50,000 source records bound the O(n log n) sort and repeated pool filters.
+// 4,096 high-rarity results already require 171 pages at the runtime's
+// 24-item page size. Reject larger histories explicitly before sorting and
+// expanding them into render models instead of silently hiding results.
+export const MAX_RENDERABLE_RECORDS = 50_000
+export const MAX_RENDERABLE_HIGH_RARITY_RECORDS = 4_096
+
 const LIMITED_CHARACTER_POOLS = Object.freeze({
   genshin: new Set(["301"]),
   starrail: new Set(["11", "21"]),
@@ -67,19 +74,19 @@ const STANDARD_CHARACTERS = Object.freeze({
 
 const THEME_COPY = Object.freeze({
   genshin: Object.freeze({
-    eyebrow: "提瓦特 · 祈愿档案",
+    eyebrow: "至冬 · 祈愿统计",
     title: "原神祈愿记录",
-    subtitle: "星辉落定，旅途中的每一次相遇都值得被记住。",
+    subtitle: "全部五星记录按卡池排列",
   }),
   starrail: Object.freeze({
-    eyebrow: "星穹列车 · 跃迁档案",
+    eyebrow: "星穹铁道 · 跃迁统计",
     title: "星穹铁道跃迁记录",
-    subtitle: "沿银轨回望每一次跃迁，让群星为旅程作证。",
+    subtitle: "全部五星记录按卡池排列",
   }),
   zzz: Object.freeze({
-    eyebrow: "新艾利都 · 调频档案",
+    eyebrow: "绝区零 · 调频统计",
     title: "绝区零调频记录",
-    subtitle: "信号已接入：欧气、保底与出货记录同步上屏。",
+    subtitle: "全部 S 级记录按频段排列",
   }),
 })
 
@@ -304,43 +311,19 @@ function analyzePool(game, pool, records) {
   })
 }
 
-function luckCopy(game, averageRatio, highCount) {
+function luckCopy(averageRatio, highCount) {
   if (!highCount || averageRatio === undefined) {
-    return Object.freeze({ label: "欧非待揭晓", tone: "unknown", message: "记录里的高稀有样本还不够，先让运势飞一会儿。" })
+    return Object.freeze({ label: "暂无评价", tone: "unknown" })
   }
   const tone = luckTone(averageRatio)
   const labels = {
     lucky: "欧皇",
     good: "小欧",
     steady: "常态",
-    warning: "非酋预警",
+    warning: "偏非",
     hard: "大保底",
   }
-
-  const messages = {
-    genshin: {
-      lucky: "风神都在替你推来金光，这份欧气请继续保持。",
-      good: "派蒙认证：最近的祈愿运势相当在线。",
-      steady: "提瓦特的星轨平稳，保底与惊喜都在正常巡航。",
-      warning: "非酋颜色亮起，但下一颗金星也许已经在路上。",
-      hard: "本轮祈愿抵达大保底，下一次金光愿能早些到来。",
-    },
-    starrail: {
-      lucky: "跃迁欧气已超频，群星正在向你靠拢。",
-      good: "帕姆播报：本次列车运势优于平均线。",
-      steady: "银轨运行平稳，下一站仍有提前出金的可能。",
-      warning: "非酋警报响起——请相信列车终会驶出隧道。",
-      hard: "跃迁抵达大保底，愿下一程群星提前回应。",
-    },
-    zzz: {
-      lucky: "信号满格，欧气正在新艾利都街头爆棚。",
-      good: "录像店今日运势不错，出货节奏很有型。",
-      steady: "调频信号稳定，保底计数仍在可控区间。",
-      warning: "非酋色块已上线，下一次调频请务必给力。",
-      hard: "调频信号抵达大保底，下一次出货请提前接入。",
-    },
-  }
-  return Object.freeze({ label: labels[tone], tone, message: messages[game][tone] })
+  return Object.freeze({ label: labels[tone], tone })
 }
 
 function mean(values) {
@@ -351,6 +334,27 @@ function mean(values) {
 function safeAverage(values) {
   const average = mean(values)
   return average === undefined ? undefined : Math.round(average * 10) / 10
+}
+
+function assertRenderableHistory(game, records) {
+  if (records.length > MAX_RENDERABLE_RECORDS) {
+    throw new ProtocolError(
+      "RECORD_VIEW_TOO_LARGE",
+      `Record view exceeds the ${MAX_RENDERABLE_RECORDS} total record limit`,
+    )
+  }
+  const highRank = RARITY[game].high
+  let count = 0
+  for (const record of records) {
+    if (record.rankType !== highRank) continue
+    count += 1
+    if (count > MAX_RENDERABLE_HIGH_RARITY_RECORDS) {
+      throw new ProtocolError(
+        "RECORD_VIEW_TOO_LARGE",
+        `Record view exceeds the ${MAX_RENDERABLE_HIGH_RARITY_RECORDS} high-rarity item limit`,
+      )
+    }
+  }
 }
 
 export class RecordViewService {
@@ -369,6 +373,7 @@ export class RecordViewService {
     if (source.length === 0) {
       throw new ProtocolError("NO_GACHA_RECORDS", "No records exist for the selected role")
     }
+    assertRenderableHistory(game, source)
 
     const records = [...source].sort((left, right) => compareRecordIds(right.id, left.id))
     const poolAnalyses = adapter.pools.map(pool =>
@@ -381,9 +386,6 @@ export class RecordViewService {
     const highlights = poolAnalyses
       .flatMap(analysis => analysis.highlights)
       .sort((left, right) => compareRecordIds(right.id, left.id))
-    const displayedKeys = new Set(
-      highlights.slice(0, 12).map(item => `${item.poolQueryType}:${item.id}`),
-    )
     const highPulls = poolAnalyses.flatMap(analysis => analysis.summaryPulls)
     const averageHighPity = safeAverage(highPulls)
     const averageHighPityRatio = mean(poolAnalyses.flatMap(analysis => analysis.luckRatios))
@@ -406,22 +408,15 @@ export class RecordViewService {
         offCount,
         unknownUpCount,
       }),
-      luck: luckCopy(game, averageHighPityRatio, highlights.length),
+      luck: luckCopy(averageHighPityRatio, highlights.length),
       pools: Object.freeze(
-        poolAnalyses.map(analysis => {
-          const items = analysis.highlights.filter(item =>
-            displayedKeys.has(`${item.poolQueryType}:${item.id}`),
-          )
-          return Object.freeze({
-            ...analysis.pool,
-            displayedHighCount: items.length,
-            hiddenHighCount: Math.max(0, analysis.pool.highCount - items.length),
-            items: Object.freeze(items),
-          })
-        }),
+        poolAnalyses.map(analysis => Object.freeze({
+          ...analysis.pool,
+          items: Object.freeze([...analysis.highlights]),
+        })),
       ),
       disclaimer:
-        "按卡池展示最近 12 个高稀有出货；抽数与欧非分级按本地记录内区间及对应卡池规则计算。" +
+        "按卡池展示全部高稀有结果；抽数与欧非分级按本地记录内区间及对应卡池规则计算。" +
         (game === "starrail" ? "始发跃迁仅计算一次性 50 抽首金进度。" : "") +
         "UP/歪仅标记限定角色池。",
     })

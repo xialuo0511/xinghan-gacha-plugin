@@ -167,6 +167,10 @@ body {
   --luck-color: #ff8669;
 }
 
+.luck-hard {
+  --luck-color: #ff6b7d;
+}
+
 .luck-unknown {
   --luck-color: #b9c0cd;
 }
@@ -205,6 +209,13 @@ body {
   align-items: start;
 }
 
+.pool-column {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .pool-panel {
   min-width: 0;
   padding: 14px;
@@ -213,14 +224,6 @@ body {
   border-top: 4px solid var(--accent);
   border-radius: var(--radius-medium);
   box-shadow: var(--pool-shadow);
-}
-
-.pool-panel:last-child:nth-child(odd) {
-  grid-column: 1 / -1;
-}
-
-.pool-panel:last-child:nth-child(odd) .pool-results {
-  grid-template-columns: repeat(8, minmax(0, 1fr));
 }
 
 .pool-heading,
@@ -246,11 +249,12 @@ body {
   white-space: nowrap;
 }
 
-.pool-range {
+.pool-range,
+.pool-page-count {
   display: block;
   margin-top: 3px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .pool-total {
@@ -298,7 +302,7 @@ body {
 
 .pool-metric-label {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .pool-metric-value {
@@ -326,7 +330,7 @@ body {
 .pity-cap,
 .pool-upoff {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .pity-cap {
@@ -494,7 +498,7 @@ body {
 .result-time {
   padding: 0 6px 6px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.3;
 }
 
@@ -512,7 +516,6 @@ body {
   line-height: 1.5;
 }
 
-.pool-hidden-note,
 .empty-pool-summary {
   margin: 9px 0 0;
   color: var(--muted);
@@ -540,14 +543,14 @@ body {
 .disclaimer {
   grid-column: 1 / -1;
   margin: 0;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.45;
 }
 
 .brand,
 .asset-credit,
 .generated-at {
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .brand {
@@ -557,10 +560,4 @@ body {
 
 .asset-credit {
   text-align: center;
-}
-
-/* Small-text contrast correction for the warm Genshin surfaces. */
-.theme-genshin {
-  --muted: #5b6864;
-  --accent-strong: #7c541c;
 }

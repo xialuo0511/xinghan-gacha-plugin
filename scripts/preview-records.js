@@ -6,11 +6,18 @@ import {
   recordRenderData,
   resolveRecordViewAssets,
 } from "../src/adapters/yunzai/recordRenderer.js"
+import { RecordAssetResolver } from "../src/adapters/yunzai/recordAssets.js"
+import { paginateRecordView } from "../src/view/recordViewPagination.js"
 import { RecordViewService } from "../src/view/recordViewService.js"
 
 const root = path.resolve(fileURLToPath(new URL("..", import.meta.url)))
 const output = path.join(root, "temp", "record-previews")
 const fallbackUrl = "/resources/records/assets/item-fallback.webp"
+const previewAssetResolver = new RecordAssetResolver({
+  pluginRoot: root,
+  miaoRoot: path.join(root, "temp", "miao-qa"),
+  fallbackAsset: path.join(root, "resources", "records", "assets", "item-fallback.webp"),
+})
 
 const fixtures = Object.freeze({
   genshin: Object.freeze({
@@ -31,6 +38,15 @@ const fixtures = Object.freeze({
           { pulls: 18, name: "胡桃", itemId: "10000046", itemType: "角色", isUp: true },
           { pulls: 74, name: "迪卢克", itemId: "10000016", itemType: "角色", isUp: false },
           { pulls: 44, name: "芙宁娜", itemId: "10000089", itemType: "角色", isUp: true },
+          { pulls: 81, name: "七七", itemId: "10000035", itemType: "角色", isUp: false },
+          { pulls: 32, name: "胡桃", itemId: "10000046", itemType: "角色", isUp: true },
+          { pulls: 77, name: "迪卢克", itemId: "10000016", itemType: "角色", isUp: false },
+          { pulls: 51, name: "芙宁娜", itemId: "10000089", itemType: "角色", isUp: true },
+          { pulls: 84, name: "七七", itemId: "10000035", itemType: "角色", isUp: false },
+          { pulls: 29, name: "胡桃", itemId: "10000046", itemType: "角色", isUp: true },
+          { pulls: 72, name: "迪卢克", itemId: "10000016", itemType: "角色", isUp: false },
+          { pulls: 46, name: "芙宁娜", itemId: "10000089", itemType: "角色", isUp: true },
+          { pulls: 80, name: "七七", itemId: "10000035", itemType: "角色", isUp: false },
         ],
       },
       {
@@ -39,12 +55,24 @@ const fixtures = Object.freeze({
         events: [
           { pulls: 38, name: "护摩之杖", itemId: "13501", itemType: "武器" },
           { pulls: 66, name: "雾切之回光", itemId: "11509", itemType: "武器" },
+          { pulls: 52, name: "护摩之杖", itemId: "13501", itemType: "武器" },
+          { pulls: 73, name: "雾切之回光", itemId: "11509", itemType: "武器" },
+          { pulls: 41, name: "护摩之杖", itemId: "13501", itemType: "武器" },
+          { pulls: 62, name: "雾切之回光", itemId: "11509", itemType: "武器" },
+          { pulls: 79, name: "护摩之杖", itemId: "13501", itemType: "武器" },
         ],
       },
       {
         queryType: "200",
         tail: 28,
-        events: [{ pulls: 82, name: "七七", itemId: "10000035", itemType: "角色" }],
+        events: [
+          { pulls: 82, name: "七七", itemId: "10000035", itemType: "角色" },
+          { pulls: 75, name: "迪卢克", itemId: "10000016", itemType: "角色" },
+          { pulls: 68, name: "七七", itemId: "10000035", itemType: "角色" },
+          { pulls: 90, name: "迪卢克", itemId: "10000016", itemType: "角色" },
+          { pulls: 70, name: "七七", itemId: "10000035", itemType: "角色" },
+          { pulls: 85, name: "迪卢克", itemId: "10000016", itemType: "角色" },
+        ],
       },
     ],
   }),
@@ -211,16 +239,23 @@ for (const [game, config] of Object.entries(fixtures)) {
     },
     now: () => new Date("2026-08-15T12:00:00.000Z"),
   })
-  const view = await resolveRecordViewAssets(await service.get("preview-user", game), {
-    pluginRoot: root,
-  })
-  const data = recordRenderData(view, { pluginRoot: root, fallbackUrl })
-  const source = await readFile(data.tplFile, "utf8")
-  const html = source
-    .replace("{{cssUrl}}", "/resources/records/base.css")
-    .replace("{{@ viewJson}}", data.viewJson)
-    .replace("{{scriptUrl}}", "/resources/records/base.js")
-  const target = path.join(output, `${game}.html`)
-  await writeFile(target, html, "utf8")
-  console.log(target)
+  const pages = paginateRecordView(await service.get("preview-user", game))
+  for (const page of pages) {
+    const view = await resolveRecordViewAssets(page, {
+      pluginRoot: root,
+      assetResolver: previewAssetResolver,
+    })
+    const data = recordRenderData(view, { pluginRoot: root, fallbackUrl })
+    const source = await readFile(data.tplFile, "utf8")
+    const html = source
+      .replace("{{cssUrl}}", "/resources/records/base.css")
+      .replace("{{@ viewJson}}", data.viewJson)
+      .replace("{{scriptUrl}}", "/resources/records/base.js")
+    const suffix = page.pagination.total > 1 && page.pagination.page > 1
+      ? `-${page.pagination.page}`
+      : ""
+    const target = path.join(output, `${game}${suffix}.html`)
+    await writeFile(target, html, "utf8")
+    console.log(target)
+  }
 }

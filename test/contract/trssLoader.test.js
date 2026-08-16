@@ -38,7 +38,7 @@ test("TRSS-style root loader imports every app class", async context => {
   }
   context.after(() => delete globalThis.logger)
   const loaded = await import(`${pathToFileURL(path.join(pluginRoot, "index.js")).href}?smoke=1`)
-  assert.equal(startupLogs.some(message => /2026-08-15-records-r6/.test(message)), true)
+  assert.equal(startupLogs.some(message => /2026-08-16-records-r8/.test(message)), true)
   assert.equal(startupLogs.some(message => /records/.test(message)), true)
   assert.deepEqual(Object.keys(loaded.apps), [
     "account",
@@ -90,16 +90,218 @@ test("TRSS-style root loader imports every app class", async context => {
     "％抽卡记录",
     "%绝区零抽卡记录",
     "％绝区零抽卡记录",
+    "#原神抽卡记录下一批",
+    "#星铁抽卡记录下一批",
+    "#绝区零抽卡记录下一批",
   ]) {
     assert.equal(records.rule.some(rule => new RegExp(rule.reg).test(command)), true)
   }
 
   const recordReplies = []
-  records.e = { isPrivate: true, user_id: "fixture-user", adapter_name: "MCQQ" }
-  records.reply = async message => recordReplies.push(message)
+  records.e = {
+    isPrivate: true,
+    user_id: "fixture-user",
+    self_id: "fixture-bot",
+    adapter_name: "MCQQ",
+    reply: async message => recordReplies.push(message),
+  }
   await records.viewZzz()
   assert.match(recordReplies[0], /正在生成绝区零抽卡记录图/)
   assert.equal(startupLogs.some(message => /records.*命令已命中.*game=zzz/.test(message)), true)
+
+  const gate = await import(pathToFileURL(path.join(pluginRoot, "src", "adapters", "yunzai", "recordRenderGate.js")))
+  let releaseBlocker
+  let markBlockerStarted
+  const blockerStarted = new Promise(resolve => {
+    markBlockerStarted = resolve
+  })
+  const blocker = gate.enqueueRecordRender("fixture:blocker", async () => {
+    markBlockerStarted()
+    await new Promise(resolve => {
+      releaseBlocker = resolve
+    })
+  })
+  await blockerStarted
+
+  const firstEventReplies = []
+  const secondEventReplies = []
+  const queuedRecords = new loaded.apps.records()
+  queuedRecords.e = {
+    isPrivate: true,
+    user_id: "first-user",
+    self_id: "fixture-bot",
+    adapter_name: "MCQQ",
+    reply: async message => firstEventReplies.push(message),
+  }
+  const queuedView = queuedRecords.viewGenshin()
+  await new Promise(resolve => setImmediate(resolve))
+  queuedRecords.e = {
+    isPrivate: true,
+    user_id: "second-user",
+    self_id: "fixture-bot",
+    adapter_name: "MCQQ",
+    reply: async message => secondEventReplies.push(message),
+  }
+  releaseBlocker()
+  await blocker.completion
+  await queuedView
+  assert.match(firstEventReplies[0], /已进入生成队列/)
+  assert.equal(firstEventReplies.length >= 2, true)
+  assert.deepEqual(secondEventReplies, [])
+
+  const batchView = {
+    game: "genshin",
+    uid: "batch-uid",
+    latestRecordAt: "2026-08-16T00:00:00.000Z",
+    summary: { totalRecords: 1_930, highCount: 193 },
+    pools: [{
+      queryType: "301",
+      name: "角色活动祈愿",
+      total: 1_930,
+      highCount: 193,
+      items: Array.from({ length: 193 }, (_, index) => ({
+        id: String(index + 1),
+        name: `结果 ${index + 1}`,
+      })),
+    }],
+  }
+  const batchReplies = []
+  const renderedPages = []
+  const batchRecords = new loaded.apps.records()
+  batchRecords.e = {
+    isPrivate: true,
+    user_id: "batch-user",
+    self_id: "fixture-bot",
+    adapter_name: "MCQQ",
+    reply: async message => {
+      batchReplies.push(message)
+      return { message_id: String(batchReplies.length) }
+    },
+  }
+  batchRecords.getRecordRuntime = () => ({
+    recordViewService: { get: async () => batchView },
+  })
+  batchRecords.renderRecordPage = async page => {
+    renderedPages.push(page)
+    return { type: "image", page: page.pagination.page }
+  }
+  batchRecords.waitRecordPageInterval = async () => {}
+
+  await batchRecords.viewGenshin()
+  assert.deepEqual(renderedPages.map(page => page.pagination.page), [1, 2, 3, 4, 5, 6, 7, 8])
+  assert.equal(
+    renderedPages.reduce(
+      (sum, page) => sum + page.pools.reduce((poolSum, pool) => poolSum + pool.items.length, 0),
+      0,
+    ),
+    192,
+  )
+  assert.equal(
+    batchReplies.some(message => typeof message === "string" && /#原神抽卡记录下一批/.test(message)),
+    true,
+  )
+
+  await batchRecords.nextGenshin()
+  assert.deepEqual(renderedPages.map(page => page.pagination.page), [1, 2, 3, 4, 5, 6, 7, 8, 9])
+  assert.equal(renderedPages[8].pools[0].items.length, 1)
+
+  let resolveLateView
+  let timedOutRenderCount = 0
+  const timedOutReplies = []
+  const timedOutRecords = new loaded.apps.records()
+  timedOutRecords.e = {
+    isPrivate: true,
+    user_id: "timed-out-user",
+    self_id: "fixture-bot",
+    adapter_name: "MCQQ",
+    reply: async message => timedOutReplies.push(message),
+  }
+  timedOutRecords.getRecordRuntime = () => ({
+    recordViewService: {
+      get: () => new Promise(resolve => {
+        resolveLateView = resolve
+      }),
+    },
+  })
+  timedOutRecords.recordViewLoadTimeoutMilliseconds = () => 5
+  timedOutRecords.renderRecordPage = async () => {
+    timedOutRenderCount += 1
+    return { type: "image" }
+  }
+
+  await timedOutRecords.viewGenshin()
+  assert.equal(timedOutRenderCount, 0)
+  assert.equal(
+    timedOutReplies.some(message => typeof message === "string" && /读取抽卡记录超时/.test(message)),
+    true,
+  )
+
+  const afterTimeoutPages = []
+  const afterTimeoutRecords = new loaded.apps.records()
+  afterTimeoutRecords.e = {
+    isPrivate: true,
+    user_id: "after-timeout-user",
+    self_id: "fixture-bot",
+    adapter_name: "MCQQ",
+    reply: async () => ({ message_id: "after-timeout" }),
+  }
+  afterTimeoutRecords.getRecordRuntime = () => ({
+    recordViewService: { get: async () => ({ ...batchView, uid: "after-timeout-uid" }) },
+  })
+  afterTimeoutRecords.renderRecordPage = async page => {
+    afterTimeoutPages.push(page.pagination.page)
+    return { type: "image", page: page.pagination.page }
+  }
+  afterTimeoutRecords.waitRecordPageInterval = async () => {}
+
+  await afterTimeoutRecords.viewGenshin()
+  assert.deepEqual(afterTimeoutPages, [1, 2, 3, 4, 5, 6, 7, 8])
+
+  resolveLateView(batchView)
+  await new Promise(resolve => setImmediate(resolve))
+  assert.equal(timedOutRenderCount, 0)
+
+  const failedPages = []
+  const failedReplies = []
+  let rejectFirstPage = true
+  const failedRecords = new loaded.apps.records()
+  failedRecords.e = {
+    isPrivate: true,
+    user_id: "failed-user",
+    self_id: "fixture-bot",
+    adapter_name: "MCQQ",
+    reply: async message => {
+      failedReplies.push(message)
+      if (rejectFirstPage && message?.type === "image") return { error: "rate limited" }
+      return { message_id: String(failedReplies.length) }
+    },
+  }
+  failedRecords.getRecordRuntime = () => ({
+    recordViewService: {
+      get: async () => ({
+        ...batchView,
+        uid: "failed-uid",
+        summary: { totalRecords: 250, highCount: 25 },
+        pools: [{ ...batchView.pools[0], total: 250, highCount: 25, items: batchView.pools[0].items.slice(0, 25) }],
+      }),
+    },
+  })
+  failedRecords.renderRecordPage = async page => {
+    failedPages.push(page.pagination.page)
+    return { type: "image", page: page.pagination.page }
+  }
+  failedRecords.waitRecordPageInterval = async () => {}
+
+  await failedRecords.viewGenshin()
+  assert.deepEqual(failedPages, [1])
+  assert.equal(
+    failedReplies.some(message => typeof message === "string" && /下一批 重试/.test(message)),
+    true,
+  )
+
+  rejectFirstPage = false
+  await failedRecords.nextGenshin()
+  assert.deepEqual(failedPages, [1, 1, 2])
 
   const status = new loaded.apps.status()
   assert.equal(status.rule.some(rule => new RegExp(rule.reg).test("#星瀚抽卡诊断")), true)
@@ -107,7 +309,7 @@ test("TRSS-style root loader imports every app class", async context => {
   status.e = { isPrivate: true, adapter_name: "MCQQ", message_type: "private" }
   status.reply = async message => statusReplies.push(message)
   await status.diagnose()
-  assert.match(statusReplies[0], /2026-08-15-records-r6/)
+  assert.match(statusReplies[0], /2026-08-16-records-r8/)
   assert.match(statusReplies[0], /主密钥：当前进程(?:已|未)读取/)
 
   const update = new loaded.apps.update()
