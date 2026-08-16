@@ -13,6 +13,8 @@ const TEMPLATE_FILES = Object.freeze({
 
 const resolverCache = new Map()
 const DEFAULT_ASSET_TIMEOUT_MS = 5_000
+const DEFAULT_SCREENSHOT_TIMEOUT_MS = 60_000
+const DEFAULT_RENDERER_RECOVERY_TIMEOUT_MS = 15_000
 const MAX_ASSET_CATALOG_CHARACTERS = 8 * 1024 * 1024
 const ASSET_DIAGNOSTIC_INTERVAL_MS = 60_000
 let lastAssetTimeoutDiagnosticAt = 0
@@ -31,6 +33,8 @@ export function recordRenderData(view, { pluginRoot, fallbackUrl } = {}) {
   const resourceRoot = path.join(root, "resources", "records")
   const template = TEMPLATE_FILES[view?.game]
   if (!template) throw new RangeError("Unsupported record view game")
+  // The global record render gate makes page writes strictly sequential. Reuse
+  // one stable path so TRSS does not retain a new UID-bearing HTML file per page.
   const saveId = createHash("sha256")
     .update(`${view.game}:${view.uid}`, "utf8")
     .digest("hex")
@@ -51,7 +55,6 @@ export function recordRenderData(view, { pluginRoot, fallbackUrl } = {}) {
     viewJson: serializedView(renderView),
     cssUrl: pathToFileURL(path.join(resourceRoot, "base.css")).href,
     scriptUrl: pathToFileURL(path.join(resourceRoot, "base.js")).href,
-    pageGotoParams: Object.freeze({ timeout: 30_000, waitUntil: "load" }),
   })
 }
 
@@ -92,6 +95,20 @@ function timeoutMilliseconds(value) {
   return Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 30_000) : DEFAULT_ASSET_TIMEOUT_MS
 }
 
+function screenshotTimeoutMilliseconds(value) {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed > 0
+    ? Math.min(parsed, 5 * 60_000)
+    : DEFAULT_SCREENSHOT_TIMEOUT_MS
+}
+
+function recoveryTimeoutMilliseconds(value) {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed > 0
+    ? Math.min(parsed, 60_000)
+    : DEFAULT_RENDERER_RECOVERY_TIMEOUT_MS
+}
+
 function assetTimeoutDiagnostic(timeoutMs) {
   const output = globalThis.logger?.warn ?? globalThis.logger?.info
   if (typeof output !== "function") return
@@ -105,18 +122,55 @@ function assetTimeoutDiagnostic(timeoutMs) {
   )
 }
 
-async function withAssetTimeout(promise, timeoutMs) {
-  const timedOut = Symbol("asset-timeout")
+async function withTimeout(promise, timeoutMs) {
+  const timedOut = Symbol("operation-timeout")
   let timer
   const timeout = new Promise(resolve => {
     timer = setTimeout(() => resolve(timedOut), timeoutMs)
   })
   try {
     const result = await Promise.race([promise, timeout])
-    return result === timedOut ? undefined : result
+    return result === timedOut
+      ? Object.freeze({ value: undefined, timedOut: true })
+      : Object.freeze({ value: result, timedOut: false })
   } finally {
     clearTimeout(timer)
   }
+}
+
+async function recoverTimedOutRenderer(renderer, timeoutMs) {
+  let recovery
+  if (typeof renderer?.restart === "function") {
+    recovery = Promise.resolve().then(() => renderer.restart(true))
+  } else {
+    const browser = renderer?.browser
+    const close = browser?.close
+    if (typeof close !== "function") return
+    try {
+      renderer.browser = false
+    } catch {
+      // Closing the browser is still useful when the renderer state is read-only.
+    }
+    recovery = Promise.resolve().then(() => close.call(browser))
+  }
+
+  // Promise.race observes the recovery rejection while it is pending. Keep an
+  // explicit terminal handler as well because a timed-out recovery may reject later.
+  void recovery.catch(() => {})
+  try {
+    await withTimeout(recovery, timeoutMs)
+  } catch {
+    // The original screenshot timeout remains the public failure.
+  }
+}
+
+function renderExecutionFailure(causeName) {
+  const failure = new ProtocolError(
+    "RENDER_EXECUTION_FAILED",
+    "Record screenshot renderer threw an exception",
+  )
+  failure.causeName = String(causeName ?? "Error")
+  return failure
 }
 
 export async function resolveRecordViewAssets(view, options = {}) {
@@ -139,8 +193,8 @@ export async function resolveRecordViewAssets(view, options = {}) {
   let catalogCharacters = 0
   let assetNumber = 0
 
-  // At most twelve high-rarity cards are rendered. Resolve their unique assets
-  // sequentially to avoid multiplying filesystem reads and Base64 buffers.
+  // Resolve each unique displayed asset sequentially to avoid multiplying
+  // filesystem reads and Base64 buffers when a long history is rendered.
   for (const [identity, item] of identities) {
     let asset
     try {
@@ -189,25 +243,45 @@ export async function renderRecordImage(renderer, view, options) {
   }
   const pluginRoot = options?.pluginRoot ?? path.join(process.cwd(), "plugins", "xinghan-gacha-plugin")
   const assetTimeoutMs = timeoutMilliseconds(options?.assetTimeoutMs)
-  const resolvedView = await withAssetTimeout(
-    resolveRecordViewAssets(view, { ...options, pluginRoot }),
-    assetTimeoutMs,
+  const screenshotTimeoutMs = screenshotTimeoutMilliseconds(options?.screenshotTimeoutMs)
+  const rendererRecoveryTimeoutMs = recoveryTimeoutMilliseconds(options?.rendererRecoveryTimeoutMs)
+  let resolvedView
+  if (!options?.skipAssetResolution) {
+    const assetResult = await withTimeout(
+      resolveRecordViewAssets(view, { ...options, pluginRoot }),
+      assetTimeoutMs,
+    )
+    resolvedView = assetResult.value
+    if (assetResult.timedOut) {
+      assetTimeoutDiagnostic(assetTimeoutMs)
+      try {
+        options?.onAssetTimeout?.()
+      } catch {
+        // A diagnostic hook must never block the fallback screenshot.
+      }
+    }
+  }
+  const renderData = { ...recordRenderData(resolvedView ?? view, { ...options, pluginRoot }) }
+  const screenshot = Promise.resolve().then(() =>
+    renderer.screenshot("xinghan-gacha-records", renderData),
   )
-  if (!resolvedView) assetTimeoutDiagnostic(assetTimeoutMs)
-  let image
+  // A screenshot can reject after the watchdog has already recovered Chromium.
+  // Observe that late rejection so it never becomes an unhandled process error.
+  void screenshot.catch(() => {})
+
+  let screenshotResult
   try {
     // Yunzai Renderer.dealTpl() adds resPath to this object before rendering.
     // Keep recordRenderData immutable for callers, but pass the renderer a mutable contract.
-    const renderData = { ...recordRenderData(resolvedView ?? view, { ...options, pluginRoot }) }
-    image = await renderer.screenshot("xinghan-gacha-records", renderData)
+    screenshotResult = await withTimeout(screenshot, screenshotTimeoutMs)
   } catch (error) {
-    const failure = new ProtocolError(
-      "RENDER_EXECUTION_FAILED",
-      "Record screenshot renderer threw an exception",
-    )
-    failure.causeName = String(error?.name ?? "Error")
-    throw failure
+    throw renderExecutionFailure(error?.name)
   }
+  if (screenshotResult.timedOut) {
+    await recoverTimedOutRenderer(renderer, rendererRecoveryTimeoutMs)
+    throw renderExecutionFailure("TimeoutError")
+  }
+  const image = screenshotResult.value
   if (!image) throw new ProtocolError("RENDER_UNAVAILABLE", "Record screenshot failed")
   if (Buffer.isBuffer(image)) {
     if (typeof globalThis.segment?.image !== "function") {

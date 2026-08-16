@@ -1,7 +1,11 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { RecordViewService } from "../../src/view/recordViewService.js"
+import {
+  MAX_RENDERABLE_HIGH_RARITY_RECORDS,
+  MAX_RENDERABLE_RECORDS,
+  RecordViewService,
+} from "../../src/view/recordViewService.js"
 
 const roles = Object.freeze({
   genshin: Object.freeze({
@@ -81,13 +85,20 @@ function displayedItems(view) {
 for (const game of ["genshin", "starrail", "zzz"]) {
   test(`builds ${game} pool, pity, luck, UP and off-banner presentation`, async () => {
     const view = await service().get("user-a", game)
+    const expectedTheme = {
+      genshin: ["至冬 · 祈愿统计", "全部五星记录按卡池排列"],
+      starrail: ["星穹铁道 · 跃迁统计", "全部五星记录按卡池排列"],
+      zzz: ["绝区零 · 调频统计", "全部 S 级记录按频段排列"],
+    }[game]
     assert.equal(view.game, game)
+    assert.deepEqual([view.theme.eyebrow, view.theme.subtitle], expectedTheme)
     assert.equal(view.summary.total, 5)
     assert.equal(view.summary.highCount, 2)
     assert.equal(view.summary.upCount, 1)
     assert.equal(view.summary.offCount, 1)
     assert.equal(view.summary.averageHighPity, 2.5)
     assert.equal(view.luck.label, "欧皇")
+    assert.equal("message" in view.luck, false)
     assert.deepEqual(
       displayedItems(view).map(item => [item.name, item.status.label, item.pulls]),
       [
@@ -97,8 +108,9 @@ for (const game of ["genshin", "starrail", "zzz"]) {
     )
     assert.equal(displayedItems(view).every(item => item.pullLuck.label === "欧皇"), true)
     const activePool = view.pools.find(pool => pool.total > 0)
-    assert.equal(activePool.displayedHighCount, 2)
-    assert.equal(activePool.hiddenHighCount, 0)
+    assert.equal(activePool.items.length, activePool.highCount)
+    assert.equal("displayedHighCount" in activePool, false)
+    assert.equal("hiddenHighCount" in activePool, false)
     assert.equal(activePool.averageHighPity, 2.5)
     assert.equal(activePool.bestHighPity, 2)
     assert.equal(activePool.worstHighPity, 3)
@@ -110,6 +122,8 @@ for (const game of ["genshin", "starrail", "zzz"]) {
     assert.equal("highlights" in view, false)
     assert.equal("middleCount" in view.summary, false)
     assert.equal(view.generatedAt, "2026-08-02T12:00:00.000Z")
+    assert.match(view.disclaimer, /展示全部高稀有结果/)
+    assert.equal(view.disclaimer.includes("最近 12"), false)
   })
 }
 
@@ -341,7 +355,7 @@ test("keeps high-rarity items in their own pools with item metadata", async () =
   assert.equal(weaponPool.items[0].status, undefined)
 })
 
-test("limits the whole image to the latest twelve high-rarity items and reports hidden counts", async () => {
+test("keeps every high-rarity item in its pool without truncating the record image", async () => {
   const role = roles.genshin
   const source = Array.from({ length: 16 }, (_, index) =>
     record(role, index + 1, `五星 ${index + 1}`, "5", index % 2 === 0 ? "301" : "302", {
@@ -356,13 +370,64 @@ test("limits the whole image to the latest twelve high-rarity items and reports 
   })
 
   const view = await custom.get("user-a", "genshin")
-  assert.equal(displayedItems(view).length, 12)
-  assert.equal(view.pools.reduce((sum, pool) => sum + pool.hiddenHighCount, 0), 4)
+  assert.equal(view.summary.highCount, 16)
+  assert.equal(displayedItems(view).length, 16)
+  assert.deepEqual(
+    view.pools
+      .filter(pool => pool.highCount > 0)
+      .map(pool => [pool.queryType, pool.highCount, pool.items.length]),
+    [
+      ["301", 8, 8],
+      ["302", 8, 8],
+    ],
+  )
+  assert.equal(view.pools.every(pool => !("displayedHighCount" in pool)), true)
+  assert.equal(view.pools.every(pool => !("hiddenHighCount" in pool)), true)
   assert.deepEqual(
     displayedItems(view)
       .map(item => Number(item.id))
       .sort((a, b) => a - b),
-    [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+  )
+})
+
+test("rejects an unsafe high-rarity history instead of silently truncating it", async () => {
+  const role = roles.genshin
+  const source = Array.from(
+    { length: MAX_RENDERABLE_HIGH_RARITY_RECORDS + 1 },
+    (_, index) => record(role, index + 1, `五星 ${index + 1}`, "5", "301"),
+  )
+  const custom = service({
+    recordStore: {
+      listRoles: async () => [role],
+      load: async () => source,
+    },
+  })
+
+  await assert.rejects(
+    custom.get("user-a", "genshin"),
+    error =>
+      error?.code === "RECORD_VIEW_TOO_LARGE" &&
+      error?.message.includes(String(MAX_RENDERABLE_HIGH_RARITY_RECORDS)),
+  )
+})
+
+test("rejects an unsafe total history before sorting even when high-rarity is sparse", async () => {
+  const role = roles.genshin
+  const ordinary = record(role, 1, "普通物品", "3", "301")
+  const source = Array(MAX_RENDERABLE_RECORDS + 1).fill(ordinary)
+  const custom = service({
+    recordStore: {
+      listRoles: async () => [role],
+      load: async () => source,
+    },
+  })
+
+  await assert.rejects(
+    custom.get("user-a", "genshin"),
+    error =>
+      error?.code === "RECORD_VIEW_TOO_LARGE" &&
+      error?.message.includes(String(MAX_RENDERABLE_RECORDS)),
   )
 })
 

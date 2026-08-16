@@ -32,6 +32,22 @@ test("builds a local-only TRSS Puppeteer render contract", () => {
   assert.equal(data.imgType, "jpeg")
   assert.equal(data.quality, 90)
   assert.match(data.saveId, /^[a-f0-9]{20}$/)
+  assert.equal(Object.hasOwn(data, "pageGotoParams"), false)
+
+  const firstPage = recordRenderData(
+    { ...view(), pagination: { page: 1, total: 2, totalItems: 25 } },
+    { pluginRoot },
+  )
+  const repeatedFirstPage = recordRenderData(
+    { ...view(), pagination: { page: 1, total: 2, totalItems: 25 } },
+    { pluginRoot },
+  )
+  const secondPage = recordRenderData(
+    { ...view(), pagination: { page: 2, total: 2, totalItems: 25 } },
+    { pluginRoot },
+  )
+  assert.equal(firstPage.saveId, repeatedFirstPage.saveId)
+  assert.equal(firstPage.saveId, secondPage.saveId)
 })
 
 test("decorates pool items through an injected local asset resolver", async () => {
@@ -136,6 +152,34 @@ test("falls back to the bundled image when optional asset resolution times out",
   assert.equal(diagnostics.length, 1)
 })
 
+test("reports an asset timeout and lets later pages skip further asset work", async () => {
+  let timedOut = false
+  let resolutions = 0
+  const renderer = { screenshot: async () => ({ type: "image", data: "fixture" }) }
+  const assetResolver = {
+    resolve: async () => {
+      resolutions += 1
+      return new Promise(() => {})
+    },
+  }
+
+  await renderRecordImage(renderer, view(), {
+    assetTimeoutMs: 5,
+    assetResolver,
+    onAssetTimeout: () => {
+      timedOut = true
+    },
+  })
+  assert.equal(timedOut, true)
+  assert.equal(resolutions, 1)
+
+  await renderRecordImage(renderer, view(), {
+    assetResolver,
+    skipAssetResolution: timedOut,
+  })
+  assert.equal(resolutions, 1)
+})
+
 test("uses the TRSS screenshot adapter and rejects an empty render", async () => {
   const calls = []
   const image = { type: "image", data: "fixture" }
@@ -193,4 +237,80 @@ test("normalizes renderer exceptions without exposing their messages", async () 
       error?.causeName === "TypeError" &&
       !error.message.includes("sensitive"),
   )
+})
+
+test("restarts after a never-settling screenshot and allows the next screenshot to run", async () => {
+  let screenshotCalls = 0
+  const restartCalls = []
+  const renderer = {
+    screenshot: async () => {
+      screenshotCalls += 1
+      if (screenshotCalls === 1) return new Promise(() => {})
+      return { type: "image", data: "recovered" }
+    },
+    restart: async force => {
+      restartCalls.push(force)
+    },
+  }
+
+  await assert.rejects(
+    renderRecordImage(renderer, view(), {
+      skipAssetResolution: true,
+      screenshotTimeoutMs: 5,
+      rendererRecoveryTimeoutMs: 50,
+    }),
+    error => error?.code === "RENDER_EXECUTION_FAILED" && error?.causeName === "TimeoutError",
+  )
+  assert.deepEqual(restartCalls, [true])
+
+  const result = await renderRecordImage(renderer, view(), {
+    skipAssetResolution: true,
+    screenshotTimeoutMs: 50,
+  })
+  assert.deepEqual(result, { type: "image", data: "recovered" })
+  assert.equal(screenshotCalls, 2)
+})
+
+test("observes a stale screenshot rejection after the watchdog has fired", async () => {
+  let rejectStaleScreenshot
+  const staleScreenshot = new Promise((_resolve, reject) => {
+    rejectStaleScreenshot = reject
+  })
+  const renderer = {
+    screenshot: async () => staleScreenshot,
+    restart: async () => {},
+  }
+
+  await assert.rejects(
+    renderRecordImage(renderer, view(), {
+      skipAssetResolution: true,
+      screenshotTimeoutMs: 5,
+      rendererRecoveryTimeoutMs: 50,
+    }),
+    error => error?.code === "RENDER_EXECUTION_FAILED" && error?.causeName === "TimeoutError",
+  )
+
+  rejectStaleScreenshot(new Error("late screenshot rejection"))
+  await new Promise(resolve => setImmediate(resolve))
+})
+
+test("bounds recovery when renderer restart never settles", { timeout: 1_000 }, async () => {
+  let restartCalls = 0
+  const renderer = {
+    screenshot: async () => new Promise(() => {}),
+    restart: async () => {
+      restartCalls += 1
+      return new Promise(() => {})
+    },
+  }
+
+  await assert.rejects(
+    renderRecordImage(renderer, view(), {
+      skipAssetResolution: true,
+      screenshotTimeoutMs: 5,
+      rendererRecoveryTimeoutMs: 5,
+    }),
+    error => error?.code === "RENDER_EXECUTION_FAILED" && error?.causeName === "TimeoutError",
+  )
+  assert.equal(restartCalls, 1)
 })

@@ -73,7 +73,7 @@ function fixture() {
       offCount: 0,
       unknownUpCount: 0,
     },
-    luck: { label: "欧皇", tone: "lucky", message: "测试欧气" },
+    luck: { label: "欧皇", tone: "lucky" },
     assets: { fallbackUrl: "file:///fixture/item-fallback.webp" },
     pools: [
       {
@@ -89,8 +89,6 @@ function fixture() {
         worstHighPity: 20,
         upCount: 1,
         offCount: 0,
-        displayedHighCount: 1,
-        hiddenHighCount: 0,
         dateRange: { from: "2026-08-02 11:00:00", to: "2026-08-02 11:00:00" },
         items: [
           {
@@ -121,8 +119,6 @@ function fixture() {
         worstHighPity: 35,
         upCount: 0,
         offCount: 0,
-        displayedHighCount: 1,
-        hiddenHighCount: 0,
         dateRange: { from: "2026-08-01 11:00:00", to: "2026-08-02 11:00:00" },
         items: [
           {
@@ -147,8 +143,6 @@ function fixture() {
         worstHighPity: undefined,
         upCount: 0,
         offCount: 0,
-        displayedHighCount: 0,
-        hiddenHighCount: 0,
         dateRange: { from: "2026-08-01 11:00:00", to: "2026-08-02 11:00:00" },
         items: [],
       },
@@ -162,6 +156,7 @@ test("shared record page script builds a complete DOM without HTML injection", a
 
   assert.equal(body.dataset.rendered, "true")
   assert.equal(container.children.length, 3)
+  assert.equal(countClass(container, "pool-column"), 2)
   assert.equal(countClass(container, "pool-panel"), 3)
   assert.equal(countClass(container, "result-card"), 2)
   assert.equal(countClass(container, "result-image"), 2)
@@ -177,6 +172,11 @@ test("shared record page script builds a complete DOM without HTML injection", a
   const serialized = JSON.stringify(container)
   assert.equal(serialized.includes("alert(1)"), true)
   assert.equal(serialized.includes("innerHTML"), false)
+  assert.equal(serialized.includes("总体评价"), true)
+  assert.equal(serialized.includes("1 个五星结果，平均 20 抽"), true)
+  assert.equal(serialized.includes("卡池明细"), true)
+  assert.equal(serialized.includes("欧非雷达"), false)
+  assert.equal(serialized.includes("分池战报"), false)
 
   const firstImage = findClass(container, "result-image")
   assert.equal(firstImage.dataset.fallbackTried, "false")
@@ -229,7 +229,6 @@ test("asset attribution distinguishes local, partial, fallback, and empty states
   for (const pool of emptyView.pools) {
     pool.items = []
     pool.highCount = 0
-    pool.displayedHighCount = 0
   }
   const empty = await render(emptyView)
   assert.equal(
@@ -238,7 +237,7 @@ test("asset attribution distinguishes local, partial, fallback, and empty states
   )
 })
 
-test("dense six-pool view renders twelve high-rarity cards", async () => {
+test("dense six-pool view renders all eighteen high-rarity cards without folding", async () => {
   const view = fixture()
   const templatePool = view.pools[0]
   view.pools = Array.from({ length: 6 }, (_, poolIndex) => ({
@@ -246,9 +245,8 @@ test("dense six-pool view renders twelve high-rarity cards", async () => {
     queryType: String(poolIndex + 1),
     name: `测试卡池 ${poolIndex + 1}`,
     total: 20,
-    highCount: 2,
-    displayedHighCount: 2,
-    items: Array.from({ length: 2 }, (_, itemIndex) => ({
+    highCount: 3,
+    items: Array.from({ length: 3 }, (_, itemIndex) => ({
       ...templatePool.items[0],
       name: `高稀有 ${poolIndex + 1}-${itemIndex + 1}`,
       asset: { url: view.assets.fallbackUrl, source: "builtin", kind: "character" },
@@ -258,8 +256,26 @@ test("dense six-pool view renders twelve high-rarity cards", async () => {
   const { body, container } = await render(view)
   assert.equal(body.dataset.rendered, "true")
   assert.equal(countClass(container, "pool-panel"), 6)
-  assert.equal(countClass(container, "result-card"), 12)
+  assert.equal(countClass(container, "result-card"), 18)
   assert.equal(textForClass(container, "asset-credit"), "高稀有图片均使用本插件内置图像")
+  const serialized = JSON.stringify(container)
+  assert.equal(serialized.includes("较早高稀有结果未展开"), false)
+  assert.equal(serialized.includes("折叠"), false)
+})
+
+test("multi-page views show factual page progress without hiding page items", async () => {
+  const view = fixture()
+  view.pagination = { page: 2, total: 3, totalItems: 50 }
+
+  const { body, container } = await render(view)
+  const serialized = JSON.stringify(container)
+  assert.equal(body.dataset.rendered, "true")
+  assert.equal(countClass(container, "result-card"), 2)
+  assert.equal(serialized.includes("第 2 / 3 页"), true)
+  assert.equal(serialized.includes("第 2 / 3 页 · 共 50 个五星结果"), true)
+  assert.equal(serialized.includes("本页 1 / 全池 1 个五星结果"), true)
+  assert.equal(serialized.includes("未展开"), false)
+  assert.equal(serialized.includes("折叠"), false)
 })
 
 test("Departure Warp renders a finite one-shot guarantee instead of repeatable pity", async () => {
@@ -277,7 +293,6 @@ test("Departure Warp renders a finite one-shot guarantee instead of repeatable p
     pityMode: "consumed",
     guaranteePulls: 10,
     extraHighCount: 1,
-    displayedHighCount: 2,
     items: [
       {
         ...consumedView.pools[0].items[0],
