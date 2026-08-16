@@ -21,6 +21,7 @@
     "test": "node --test",
     "check": "npm run lint && npm test",
     "preview:records": "node scripts/preview-records.js",
+    "preview:records:serve": "node scripts/serve-record-previews.js",
     "smoke:live": "node scripts/live-smoke.js"
   }
 }

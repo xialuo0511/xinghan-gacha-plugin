@@ -136,21 +136,119 @@ function upStatus(game, record, highRank) {
 
 function hardPity(game, pool) {
   if (game === "genshin" && pool.queryType === "302") return 80
+  if (game === "starrail" && pool.queryType === "2") return 50
   if (game === "starrail" && ["12", "22"].includes(pool.queryType)) return 80
   if (game === "zzz" && ["3", "5", "103"].includes(pool.queryType)) return 80
   return 90
 }
 
+function luckTone(ratio) {
+  if (ratio <= 0.35) return "lucky"
+  if (ratio <= 0.6) return "good"
+  if (ratio <= 0.8) return "steady"
+  if (ratio < 1) return "warning"
+  return "hard"
+}
+
 function pullLuck(pulls, pityCap) {
-  const ratio = pulls / pityCap
-  if (ratio <= 0.35) return Object.freeze({ label: "欧皇", tone: "lucky" })
-  if (ratio <= 0.6) return Object.freeze({ label: "小欧", tone: "good" })
-  if (ratio <= 0.8) return Object.freeze({ label: "常态", tone: "steady" })
-  if (ratio < 1) return Object.freeze({ label: "偏非", tone: "warning" })
-  return Object.freeze({ label: "大保底", tone: "hard" })
+  const tone = luckTone(pulls / pityCap)
+  const labels = {
+    lucky: "欧皇",
+    good: "小欧",
+    steady: "常态",
+    warning: "偏非",
+    hard: "大保底",
+  }
+  return Object.freeze({ label: labels[tone], tone })
+}
+
+function itemKind(game, pool, record) {
+  const type = String(record.itemType ?? "").toLowerCase()
+  if (/邦布|bangboo/.test(type) || (game === "zzz" && pool.queryType === "5")) return "bangboo"
+  if (/武器|光锥|音擎|weapon|light\s*cone|w-engine/.test(type)) return "weapon"
+  if (/角色|代理人|character|agent/.test(type)) return "character"
+  if (game === "genshin" && pool.queryType === "302") return "weapon"
+  if (game === "starrail" && ["12", "22"].includes(pool.queryType)) return "weapon"
+  if (game === "zzz" && ["3", "103"].includes(pool.queryType)) return "weapon"
+  return "unknown"
+}
+
+function dateRange(records) {
+  const values = records.map(record => record.time).filter(Boolean).sort()
+  if (values.length === 0) return undefined
+  return Object.freeze({ from: values[0], to: values.at(-1) })
+}
+
+function analyzeDeparturePool(game, pool, records) {
+  const spec = RARITY[game]
+  const ascending = [...records].sort((left, right) => compareRecordIds(left.id, right.id))
+  const cap = hardPity(game, pool)
+  const highlights = []
+  let guaranteePulls
+  let extraHighCount = 0
+
+  for (const [index, record] of ascending.entries()) {
+    if (record.rankType !== spec.high) continue
+    const absolutePull = index + 1
+    const isGuaranteeResult = guaranteePulls === undefined
+    if (isGuaranteeResult) guaranteePulls = absolutePull
+    else extraHighCount += 1
+    highlights.push(
+      Object.freeze({
+        id: record.id,
+        itemId: record.itemId,
+        itemType: record.itemType,
+        itemKind: itemKind(game, pool, record),
+        name: record.name ?? record.itemId ?? "未知物品",
+        time: record.time,
+        pulls: absolutePull,
+        pullPrefix: "第",
+        pullLuck: isGuaranteeResult
+          ? pullLuck(absolutePull, cap)
+          : Object.freeze({ label: "额外金", tone: "lucky" }),
+        departureResult: isGuaranteeResult ? "guarantee" : "bonus",
+        poolQueryType: pool.queryType,
+        poolName: pool.name,
+      }),
+    )
+  }
+
+  const highCount = highlights.length
+  const guaranteeConsumed = guaranteePulls !== undefined
+  return Object.freeze({
+    pool: Object.freeze({
+      queryType: pool.queryType,
+      name: pool.name,
+      total: records.length,
+      highCount,
+      currentPity: guaranteeConsumed ? undefined : Math.min(records.length, cap),
+      pityCap: cap,
+      pityPercent: guaranteeConsumed
+        ? undefined
+        : Math.min(100, Math.round((records.length / cap) * 100)),
+      pityMode: guaranteeConsumed ? "consumed" : "finite",
+      guaranteePulls,
+      extraHighCount,
+      averageHighPity: guaranteePulls,
+      bestHighPity: guaranteePulls,
+      worstHighPity: guaranteePulls,
+      upCount: 0,
+      offCount: 0,
+      latestHigh: highlights.at(-1)?.name,
+      dateRange: dateRange(records),
+    }),
+    highlights: highlights.reverse(),
+    summaryPulls: guaranteeConsumed ? Object.freeze([guaranteePulls]) : Object.freeze([]),
+    luckRatios: guaranteeConsumed
+      ? Object.freeze([guaranteePulls / cap, ...Array(extraHighCount).fill(0)])
+      : Object.freeze([]),
+  })
 }
 
 function analyzePool(game, pool, records) {
+  if (game === "starrail" && pool.queryType === "2") {
+    return analyzeDeparturePool(game, pool, records)
+  }
   const spec = RARITY[game]
   const ascending = [...records].sort((left, right) => compareRecordIds(left.id, right.id))
   const highlights = []
@@ -164,11 +262,15 @@ function analyzePool(game, pool, records) {
     highlights.push(
       Object.freeze({
         id: record.id,
+        itemId: record.itemId,
+        itemType: record.itemType,
+        itemKind: itemKind(game, pool, record),
         name: record.name ?? record.itemId ?? "未知物品",
         time: record.time,
         pulls: currentPity,
         pullLuck: pullLuck(currentPity, cap),
         status,
+        poolQueryType: pool.queryType,
         poolName: pool.name,
       }),
     )
@@ -176,6 +278,7 @@ function analyzePool(game, pool, records) {
   }
 
   const highCount = highlights.length
+  const highPulls = highlights.map(item => item.pulls)
   const upCount = highlights.filter(item => item.status?.tone === "up").length
   const offCount = highlights.filter(item => item.status?.tone === "off").length
   return Object.freeze({
@@ -187,24 +290,32 @@ function analyzePool(game, pool, records) {
       currentPity,
       pityCap: cap,
       pityPercent: Math.min(100, Math.round((currentPity / cap) * 100)),
+      averageHighPity: safeAverage(highPulls),
+      bestHighPity: highPulls.length ? Math.min(...highPulls) : undefined,
+      worstHighPity: highPulls.length ? Math.max(...highPulls) : undefined,
       upCount,
       offCount,
       latestHigh: highlights.at(-1)?.name,
+      dateRange: dateRange(records),
     }),
     highlights: highlights.reverse(),
+    summaryPulls: Object.freeze(highPulls),
+    luckRatios: Object.freeze(highPulls.map(pulls => pulls / cap)),
   })
 }
 
-function luckCopy(game, average, highCount) {
-  if (!highCount || average === undefined) {
+function luckCopy(game, averageRatio, highCount) {
+  if (!highCount || averageRatio === undefined) {
     return Object.freeze({ label: "欧非待揭晓", tone: "unknown", message: "记录里的高稀有样本还不够，先让运势飞一会儿。" })
   }
-  let label
-  let tone
-  if (average <= 50) [label, tone] = ["欧皇", "lucky"]
-  else if (average <= 65) [label, tone] = ["小欧", "good"]
-  else if (average <= 78) [label, tone] = ["常态", "steady"]
-  else [label, tone] = ["非酋预警", "warning"]
+  const tone = luckTone(averageRatio)
+  const labels = {
+    lucky: "欧皇",
+    good: "小欧",
+    steady: "常态",
+    warning: "非酋预警",
+    hard: "大保底",
+  }
 
   const messages = {
     genshin: {
@@ -212,26 +323,34 @@ function luckCopy(game, average, highCount) {
       good: "派蒙认证：最近的祈愿运势相当在线。",
       steady: "提瓦特的星轨平稳，保底与惊喜都在正常巡航。",
       warning: "非酋颜色亮起，但下一颗金星也许已经在路上。",
+      hard: "本轮祈愿抵达大保底，下一次金光愿能早些到来。",
     },
     starrail: {
       lucky: "跃迁欧气已超频，群星正在向你靠拢。",
       good: "帕姆播报：本次列车运势优于平均线。",
       steady: "银轨运行平稳，下一站仍有提前出金的可能。",
       warning: "非酋警报响起——请相信列车终会驶出隧道。",
+      hard: "跃迁抵达大保底，愿下一程群星提前回应。",
     },
     zzz: {
       lucky: "信号满格，欧气正在新艾利都街头爆棚。",
       good: "录像店今日运势不错，出货节奏很有型。",
       steady: "调频信号稳定，保底计数仍在可控区间。",
       warning: "非酋色块已上线，下一次调频请务必给力。",
+      hard: "调频信号抵达大保底，下一次出货请提前接入。",
     },
   }
-  return Object.freeze({ label, tone, message: messages[game][tone] })
+  return Object.freeze({ label: labels[tone], tone, message: messages[game][tone] })
+}
+
+function mean(values) {
+  if (values.length === 0) return undefined
+  return values.reduce((sum, value) => sum + value, 0) / values.length
 }
 
 function safeAverage(values) {
-  if (values.length === 0) return undefined
-  return Math.round((values.reduce((sum, value) => sum + value, 0) / values.length) * 10) / 10
+  const average = mean(values)
+  return average === undefined ? undefined : Math.round(average * 10) / 10
 }
 
 export class RecordViewService {
@@ -262,8 +381,12 @@ export class RecordViewService {
     const highlights = poolAnalyses
       .flatMap(analysis => analysis.highlights)
       .sort((left, right) => compareRecordIds(right.id, left.id))
-    const highPulls = highlights.map(item => item.pulls)
+    const displayedKeys = new Set(
+      highlights.slice(0, 12).map(item => `${item.poolQueryType}:${item.id}`),
+    )
+    const highPulls = poolAnalyses.flatMap(analysis => analysis.summaryPulls)
     const averageHighPity = safeAverage(highPulls)
+    const averageHighPityRatio = mean(poolAnalyses.flatMap(analysis => analysis.luckRatios))
     const upCount = highlights.filter(item => item.status?.tone === "up").length
     const offCount = highlights.filter(item => item.status?.tone === "off").length
     const unknownUpCount = highlights.filter(item => item.status?.tone === "unknown").length
@@ -283,11 +406,24 @@ export class RecordViewService {
         offCount,
         unknownUpCount,
       }),
-      luck: luckCopy(game, averageHighPity, highlights.length),
-      pools: Object.freeze(poolAnalyses.map(analysis => analysis.pool)),
-      highlights: Object.freeze(highlights.slice(0, 12)),
+      luck: luckCopy(game, averageHighPityRatio, highlights.length),
+      pools: Object.freeze(
+        poolAnalyses.map(analysis => {
+          const items = analysis.highlights.filter(item =>
+            displayedKeys.has(`${item.poolQueryType}:${item.id}`),
+          )
+          return Object.freeze({
+            ...analysis.pool,
+            displayedHighCount: items.length,
+            hiddenHighCount: Math.max(0, analysis.pool.highCount - items.length),
+            items: Object.freeze(items),
+          })
+        }),
+      ),
       disclaimer:
-        "仅展示最近 12 个高稀有出货；抽数与欧非分级按本地记录内区间及对应卡池保底计算。UP/歪仅标记限定角色池。",
+        "按卡池展示最近 12 个高稀有出货；抽数与欧非分级按本地记录内区间及对应卡池规则计算。" +
+        (game === "starrail" ? "始发跃迁仅计算一次性 50 抽首金进度。" : "") +
+        "UP/歪仅标记限定角色池。",
     })
   }
 }
